@@ -1,0 +1,18 @@
+{
+  "name": "forretningsmodellen",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Gæt forretningsmodellen – interaktiv gruppeøvelse med login og underviseroverblik",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  },
+  "scripts": {
+    "proeve": "node proever/koer.mjs",
+    "proeve:api": "node proever/koer.mjs --kun-api",
+    "server": "node proever/server.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

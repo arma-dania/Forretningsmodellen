@@ -8,14 +8,85 @@ function tomTilstand(){
     valg:Object.fromEntries(r.profiler.map(p=>[p.id,""])),
     grund:Object.fromEntries(r.profiler.map(p=>[p.id,""])),
     hint:Object.fromEntries(r.profiler.map(p=>[p.id,false])),
-    rigtigFoerste:{}, tjek:0, facitVist:false, refl:SPM.map(()=> "")
+    rigtigFoerste:{}, tjek:0, facitVist:false, refl:SPM.map(()=> ""),
+    retning:null, version:0, hentet:false
   }));
 }
-let tilstand;
-try{ tilstand = JSON.parse(localStorage.getItem(LAGER_NOEGLE)) || tomTilstand(); }catch(e){ tilstand = tomTilstand(); }
-if(!Array.isArray(tilstand) || tilstand.length !== RUNDER.length) tilstand = tomTilstand();
+let tilstand = tomTilstand();
 let aktiv = 0;
-const gem = () => { try{ localStorage.setItem(LAGER_NOEGLE, JSON.stringify(tilstand)); }catch(e){} };
+let bruger = null;
+
+/* ---------- Gruppens besvarelse på serveren ----------
+   Besvarelsen ligger hos gruppen, ikke i browseren, så de kan arbejde
+   videre fra hver sin skærm og fra gang til gang. Der gemmes lidt
+   forsinket, så hvert tastetryk ikke bliver til et kald. */
+let gemTimer = null, gemmerNu = false, gemIgen = false;
+
+function gem(){
+  visGemStatus("gemmer");
+  clearTimeout(gemTimer);
+  gemTimer = setTimeout(gemNu, 800);
+}
+
+async function gemNu(){
+  clearTimeout(gemTimer);
+  if(gemmerNu){ gemIgen = true; return; }
+  gemmerNu = true;
+  const runde = aktiv, T = tilstand[runde];
+  try{
+    const svar = await API.gemBesvarelse(runde, {
+      version:T.version, valg:T.valg, grund:T.grund, hint:T.hint, refl:T.refl
+    });
+    if(svar.konflikt){ overtagFraServer(runde, svar.besvarelse, true); return; }
+    T.version = svar.version;
+    visGemStatus("gemt", svar.opdateretAf);
+  }catch(fejl){
+    visGemStatus("fejl", fejl.message);
+  }finally{
+    gemmerNu = false;
+    if(gemIgen){ gemIgen = false; gem(); }
+  }
+}
+
+// Skriver serverens udgave ind over den lokale. Bruges både ved første
+// indlæsning og når et gruppemedlem har nået at gemme noget andet.
+function overtagFraServer(runde, b, efterKonflikt){
+  const T = tilstand[runde], tom = tomTilstand()[runde];
+  Object.assign(T, {
+    valg:{...tom.valg, ...(b.valg||{})},
+    grund:{...tom.grund, ...(b.grund||{})},
+    hint:{...tom.hint, ...(b.hint||{})},
+    refl: SPM.map((_,i) => (b.refl||[])[i] ?? ""),
+    rigtigFoerste:b.rigtigFoerste||{}, tjek:b.tjek||0, facitVist:!!b.facitVist,
+    retning:b.retning||T.retning, version:b.version||0, hentet:true
+  });
+  if(runde === aktiv){
+    tegnTabel(); tegnKort(); tegnSpm(); opdaterStatus();
+    if(efterKonflikt) visGemStatus("overskrevet", b.opdateretAf);
+  }
+}
+
+async function hentRunde(runde){
+  try{
+    overtagFraServer(runde, await API.hentBesvarelse(runde));
+  }catch(fejl){
+    visGemStatus("fejl", fejl.message);
+  }
+}
+
+function visGemStatus(tilstandsnavn, detalje){
+  const el = $("gemstatus"); if(!el) return;
+  el.className = "gemstatus";
+  if(tilstandsnavn === "gemmer") el.textContent = "Gemmer …";
+  else if(tilstandsnavn === "gemt") el.textContent = "Gemt for gruppen";
+  else if(tilstandsnavn === "overskrevet"){
+    el.classList.add("bad");
+    el.textContent = `${detalje || "Et gruppemedlem"} gemte noget andet – gruppens udgave er hentet ind.`;
+  } else {
+    el.classList.add("bad");
+    el.textContent = detalje || "Kunne ikke gemme.";
+  }
+}
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -69,7 +140,7 @@ function tegnKort(){
   const R = RUNDER[aktiv], T = tilstand[aktiv];
   const sorteret = [...R.modeller].sort((a,b)=>a.navn.localeCompare(b.navn,"da"));
   $("kort").innerHTML = R.profiler.map(p => {
-    const valgt = T.valg[p.id], rigtig = valgt===p.model;
+    const valgt = T.valg[p.id], svar = T.retning?.[p.id] ?? null, rigtig = svar?.rigtig === true;
     const laast = (T.tjek>=1 && T.rigtigFoerste[p.id]) || T.tjek>=2;
     const vis = laast;
     let kls = "card", badge = "";
@@ -85,10 +156,10 @@ function tegnKort(){
     const sporNavne = p.spor.map(k => RAEKKER.find(r=>r.key===k).navn.toLowerCase());
     const sporTekst = sporNavne.length>1 ? sporNavne.slice(0,-1).join(", ")+" og "+sporNavne.at(-1) : sporNavne[0];
     let forkl = "";
-    if(vis){
+    if(vis && svar?.model){
       forkl = `<div class='forklaring'>` +
-        (!rigtig ? `<p class='facit'>${valgt?`I valgte ${esc(modelNavn(aktiv,valgt))}. `:""}Det rigtige svar er ${esc(modelNavn(aktiv,p.model))}.</p>` : `<p class='facit'>${esc(modelNavn(aktiv,p.model))}</p>`) +
-        `<p>${esc(p.forklaring)}</p><p class='forveks'>Let at forveksle med: ${esc(p.forveksling)}</p></div>`;
+        (!rigtig ? `<p class='facit'>${valgt?`I valgte ${esc(modelNavn(aktiv,valgt))}. `:""}Det rigtige svar er ${esc(modelNavn(aktiv,svar.model))}.</p>` : `<p class='facit'>${esc(modelNavn(aktiv,svar.model))}</p>`) +
+        `<p>${esc(svar.forklaring)}</p><p class='forveks'>Let at forveksle med: ${esc(svar.forveksling)}</p></div>`;
     }
     return `<div class='${kls}' data-profil='${p.id}'>
       <h3>Profil ${p.id} ${badge}</h3>
@@ -122,7 +193,8 @@ $("kort").addEventListener("change", e => {
 $("kort").addEventListener("click", e => {
   if(!e.target.matches("[data-hint]")) return;
   const id = e.target.closest("[data-profil]").dataset.profil;
-  tilstand[aktiv].hint[id] = true; gem(); tegnTabel(); tegnKort(); opdaterStatus();
+  tilstand[aktiv].hint[id] = true; gem(); API.noter("hint", {runde:aktiv, profil:id});
+  tegnTabel(); tegnKort(); opdaterStatus();
 });
 
 /* ---------- Tjek ---------- */
@@ -139,7 +211,7 @@ function opdaterStatus(){
   const T = tilstand[aktiv], s = $("status"), btn = $("tjek"), R = RUNDER[aktiv];
   s.className = "status";
   if(T.tjek>=2){
-    const rigtige = R.profiler.filter(p=>T.valg[p.id]===p.model).length;
+    const rigtige = R.profiler.filter(p=>T.retning?.[p.id]?.rigtig).length;
     const foerste = Object.values(T.rigtigFoerste).filter(Boolean).length;
     btn.hidden = true;
     s.classList.add("good");
@@ -165,14 +237,26 @@ function opdaterStatus(){
     s.textContent = `${R.profiler.length-f} af ${R.profiler.length} rigtige. Genovervej de ${f} markerede: Holder jeres begrundelse, når I kigger på tallene igen? Brug gerne hintet.`;
   } else s.textContent = "Klar til at tjekke.";
 }
-$("tjek").addEventListener("click", () => {
-  const R = RUNDER[aktiv], T = tilstand[aktiv];
-  if(T.tjek===0){
-    R.profiler.forEach(p => T.rigtigFoerste[p.id] = T.valg[p.id]===p.model);
-    T.tjek = R.profiler.every(p=>T.rigtigFoerste[p.id]) ? 2 : 1;
-  } else T.tjek = 2;
-  gem(); tegnKort(); opdaterStatus();
-});
+// Serveren retter. Klienten kender ikke facit, så svarene kan hverken
+// læses i kildekoden eller pilles ved på vej til underviserens overblik.
+async function tjekSvar(opgiv){
+  const runde = aktiv, T = tilstand[runde], btn = $("tjek");
+  btn.disabled = true;
+  await gemNu();
+  try{
+    const svar = await API.tjek(runde, {valg:T.valg, grund:T.grund, opgiv:!!opgiv});
+    Object.assign(T, {
+      tjek:svar.tjek, rigtigFoerste:svar.rigtigFoerste, retning:svar.retning,
+      version:svar.version, facitVist:T.facitVist || !!opgiv
+    });
+    tegnKort(); tegnSpm(); opdaterStatus();
+  }catch(fejl){
+    $("status").className = "status bad";
+    $("status").textContent = fejl.message;
+    btn.disabled = false;
+  }
+}
+$("tjek").addEventListener("click", () => tjekSvar(false));
 
 /* ---------- Refleksion og kopi ---------- */
 function tegnSpm(){
@@ -187,9 +271,9 @@ function byggTekst(){
   const R = RUNDER[aktiv], T = tilstand[aktiv];
   let t = `GÆT FORRETNINGSMODELLEN – ${R.navn}\n\n`;
   R.profiler.forEach(p => {
-    const rigtig = T.valg[p.id]===p.model;
+    const svar = T.retning?.[p.id] ?? {}, rigtig = svar.rigtig === true;
     t += `Profil ${p.id}\n`;
-    t += `Valgt model: ${modelNavn(aktiv,T.valg[p.id]) || "(ikke valgt)"} – ${rigtig?"rigtigt":"forkert, rigtigt svar: "+modelNavn(aktiv,p.model)}`;
+    t += `Valgt model: ${modelNavn(aktiv,T.valg[p.id]) || "(ikke valgt)"} – ${rigtig?"rigtigt":"forkert, rigtigt svar: "+modelNavn(aktiv,svar.model)}`;
     if(T.rigtigFoerste[p.id]===false && rigtig) t += " (rigtigt i andet forsøg)";
     if(T.hint[p.id]) t += " (hint brugt)";
     t += `\nBegrundelse: ${T.grund[p.id].trim() || "(ingen)"}\n\n`;
@@ -221,21 +305,79 @@ function tegnAlt(){
   $("kopifelt").hidden = true; $("kopistatus").textContent = "";
   tegnTabel(); tegnModeller(); tegnKort(); tegnSpm(); opdaterStatus();
 }
+
+// Skift af runde henter gruppens besvarelse for den runde, første gang
+// den åbnes. Derefter ligger den i hukommelsen.
+async function skiftRunde(nr){
+  clearTimeout(gemTimer);
+  if(tilstand[aktiv] && !gemmerNu) await gemNu();
+  aktiv = nr;
+  tegnAlt();
+  if(!tilstand[aktiv].hentet) await hentRunde(aktiv);
+  API.noter("runde-skiftet", {runde:aktiv});
+}
 document.querySelector(".runder").addEventListener("click", e => {
   const b = e.target.closest("[data-runde]"); if(!b) return;
-  aktiv = Number(b.dataset.runde); tegnAlt();
-});
-let nulstilKlar = false;
-$("nulstil").addEventListener("click", () => {
-  if(!nulstilKlar){ nulstilKlar = true; $("nulstil").textContent = "Klik igen for at slette rundens svar"; setTimeout(()=>{nulstilKlar=false; $("nulstil").textContent="Start runden forfra";},4000); return; }
-  nulstilKlar = false; $("nulstil").textContent = "Start runden forfra";
-  tilstand[aktiv] = tomTilstand()[aktiv]; gem(); tegnAlt();
-});
-$("facit").addEventListener("click", () => {
-  const T = tilstand[aktiv];
-  T.tjek = 2; T.facitVist = true;
-  RUNDER[aktiv].profiler.forEach(p => T.hint[p.id] = true);
-  gem(); tegnAlt();
+  skiftRunde(Number(b.dataset.runde));
 });
 
-tegnAlt();
+// Nulstilling rydder kun gruppens kladde, og kun før første tjek. Et
+// registreret forsøg kan ikke viskes ud – ellers var der ikke meget ved
+// at følge resultaterne.
+let nulstilKlar = false;
+$("nulstil").addEventListener("click", async () => {
+  if(tilstand[aktiv].tjek > 0) return;
+  if(!nulstilKlar){
+    nulstilKlar = true;
+    $("nulstil").textContent = "Klik igen for at rydde rundens svar";
+    setTimeout(()=>{nulstilKlar=false; $("nulstil").textContent="Start runden forfra";}, 4000);
+    return;
+  }
+  nulstilKlar = false; $("nulstil").textContent = "Start runden forfra";
+  const tom = tomTilstand()[aktiv], T = tilstand[aktiv];
+  Object.assign(T, {valg:tom.valg, grund:tom.grund, hint:tom.hint, refl:tom.refl});
+  tegnAlt();
+  await gemNu();
+});
+
+$("facit").addEventListener("click", () => {
+  if(tilstand[aktiv].tjek >= 2) return;
+  RUNDER[aktiv].profiler.forEach(p => tilstand[aktiv].hint[p.id] = true);
+  tjekSvar(true);
+});
+
+/* ---------- Hvem er logget ind ---------- */
+function tegnBruger(){
+  $("brugernavn").textContent = bruger.navn || bruger.studienummer || "Logget ind";
+  const kammerater = bruger.gruppekammerater.filter(k => !k.erMig).map(k => k.navn || k.studienummer);
+  $("brugerhold").textContent = [bruger.hold, bruger.gruppe].filter(Boolean).join(" · ");
+  $("gruppemedlemmer").textContent = kammerater.length
+    ? `Sammen med ${kammerater.join(", ")}. I deler én besvarelse.`
+    : "Du er alene i gruppen lige nu.";
+}
+$("logud").addEventListener("click", async () => {
+  await gemNu();
+  await API.logud();
+  location.href = "login.html";
+});
+
+/* ---------- Start ---------- */
+(async function start(){
+  try{
+    bruger = await API.mig();
+  }catch(fejl){
+    // 401 sender selv videre til login. Alt andet er en rigtig fejl.
+    $("status").className = "status bad";
+    $("status").textContent = fejl.message;
+    return;
+  }
+  tegnBruger();
+  $("indhold").hidden = false;
+  $("henter").hidden = true;
+  tegnAlt();
+  await hentRunde(aktiv);
+  API.noter("aabnet", {runde:aktiv});
+})();
+
+// Luk ikke fanen med en kladde, der ikke er nået frem.
+addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") gemNu(); });

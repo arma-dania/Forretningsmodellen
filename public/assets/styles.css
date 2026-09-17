@@ -92,3 +92,73 @@ select:disabled,textarea:disabled{opacity:.85}
 footer{margin-top:3rem;border-top:1px solid var(--rule);padding-top:1rem;font-size:.88rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center}
 [hidden]{display:none !important}
 @media (prefers-reduced-motion:no-preference){.card{transition:background-color .25s,border-color .25s}}
+
+/* ============================================================
+   Login, brugerbjælke og underviserens admin-modul
+   ============================================================ */
+.wrap.smal{max-width:34rem}
+.manchet{font-family:var(--serif);font-size:1.05rem;line-height:1.6;margin:0 0 1.5rem}
+
+.brugerbjaelke{background:var(--panel);border-bottom:1px solid var(--rule)}
+.bjaelkeindhold{display:flex;flex-wrap:wrap;gap:.75rem 1.5rem;justify-content:space-between;
+  align-items:baseline;padding:.6rem 1.25rem}
+.bjaelkeindhold strong{font-weight:600}
+.bjaelkeindhold span{color:var(--muted);font-size:.9rem;margin-left:.6rem}
+.bjaelkehoejre{display:flex;gap:1.25rem;align-items:baseline}
+.gemstatus{font-size:.85rem;color:var(--muted);min-height:1em}
+.gemstatus.bad{color:var(--bad)}
+.henter{color:var(--muted);padding:3rem 0}
+.gruppeinfo{font-family:var(--sans) !important;font-size:.92rem !important;color:var(--muted)}
+
+.loginboks{background:var(--panel);border:1px solid var(--rule);padding:1.25rem;
+  display:flex;flex-direction:column;gap:.5rem}
+input[type=text],input[type=password]{font:inherit;color:var(--ink);background:var(--bg);
+  border:1px solid var(--rule);padding:.55rem .6rem;width:100%;border-radius:3px}
+.loginboks input{font-size:1.15rem;letter-spacing:.04em}
+.loginboks .primaer{margin-top:.25rem}
+footer a.linkbtn{text-decoration:underline;text-underline-offset:2px;color:var(--okker)}
+
+/* ---------- Admin ---------- */
+.adminhoved{display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:baseline;
+  border-bottom:2px solid var(--okker);padding-bottom:.9rem;margin-bottom:1.5rem}
+.adminhoved h1{margin:0;font-size:clamp(1.5rem,3vw,2rem)}
+.holdliste{display:grid;grid-template-columns:repeat(auto-fill,minmax(16rem,1fr));gap:.75rem;margin:1rem 0}
+.holdkort{background:var(--panel);border:1px solid var(--rule);padding:.9rem;text-align:left;
+  font:inherit;color:inherit;cursor:pointer}
+.holdkort[aria-current="true"]{border-color:var(--okker);box-shadow:inset 0 0 0 1px var(--okker)}
+.holdkort strong{display:block;font-family:var(--serif);font-size:1.15rem;margin-bottom:.25rem}
+.holdkort span{color:var(--muted);font-size:.88rem}
+.raekke{display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;margin:1rem 0}
+.raekke label{display:block;margin-bottom:.2rem}
+.felt{flex:1 1 14rem}
+.vaerktoej{display:flex;flex-wrap:wrap;gap:.75rem;margin:1.5rem 0 1rem}
+
+.panel{background:var(--panel);border:1px solid var(--rule);padding:1.2rem;margin:1.5rem 0}
+.panel h2{margin-top:0}
+.panel textarea{min-height:9rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85rem}
+
+table.admin{min-width:0}
+table.admin th.navn{min-width:10rem}
+table.admin td,table.admin th{font-size:.9rem}
+td.kode{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.03em;text-align:left}
+td.l,th.l{text-align:left}
+.maerke{font-size:.78rem;font-weight:600;padding:.1rem .45rem;border-radius:3px;white-space:nowrap}
+.maerke.ok{color:var(--good);border:1px solid var(--good)}
+.maerke.i-gang{color:var(--okker);border:1px solid var(--okker)}
+.maerke.ingen{color:var(--muted);border:1px solid var(--rule)}
+.maerke.facit{color:var(--bad);border:1px solid var(--bad)}
+.gruppeblok{border-top:1px solid var(--rule);padding-top:1rem;margin-top:1rem}
+.gruppeblok h3{font-family:var(--serif);font-size:1.2rem;margin:0 0 .5rem}
+.svarliste{font-size:.9rem;margin:.5rem 0 0;padding-left:1.1rem}
+.svarliste li{margin-bottom:.35rem}
+.svarliste .begrundelse{color:var(--muted);display:block}
+.log{font-size:.85rem;max-height:22rem;overflow-y:auto;border:1px solid var(--rule);padding:.6rem}
+.log div{padding:.15rem 0;border-bottom:1px solid var(--rule);display:flex;gap:.6rem}
+.log time{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.advarsel{background:var(--bad-tint);border-left:3px solid var(--bad);padding:.7rem .9rem;font-size:.92rem}
+.kodeliste{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85rem;white-space:pre-wrap;
+  background:var(--bg);border:1px solid var(--rule);padding:.8rem;max-height:20rem;overflow-y:auto}
+@media print{
+  .brugerbjaelke,.vaerktoej,.raekke,footer,.holdliste,.primaer,.sekundaer,.linkbtn{display:none !important}
+  .kodeliste{max-height:none;border:none;background:none}
+}

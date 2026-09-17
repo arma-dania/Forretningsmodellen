@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Underviser – Gæt forretningsmodellen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+
+<!-- Login -->
+<div class="wrap smal" id="loginside" hidden>
+  <p class="kontekst">Gæt forretningsmodellen</p>
+  <h1>Underviser</h1>
+  <p class="manchet">Log ind for at oprette hold og studerende og for at følge holdets arbejde.</p>
+  <form class="loginboks" id="loginform" autocomplete="off">
+    <label for="adminkode">Underviserkode</label>
+    <input type="password" id="adminkode" required autocomplete="current-password">
+    <p class="status" id="loginstatus" aria-live="polite"></p>
+    <button type="submit" class="primaer" id="loginknap">Log ind</button>
+  </form>
+  <footer><a class="linkbtn" href="login.html">Til de studerendes login</a></footer>
+</div>
+
+<!-- Admin -->
+<div class="wrap" id="adminside" hidden>
+
+<div class="adminhoved">
+  <h1>Underviser</h1>
+  <div class="bjaelkehoejre">
+    <span class="gemstatus" id="gemstatus" aria-live="polite"></span>
+    <button type="button" class="linkbtn" id="logud">Log ud</button>
+  </div>
+</div>
+
+<h2>Hold</h2>
+<div class="holdliste" id="holdliste"></div>
+<form class="raekke" id="opretholdform">
+  <div class="felt">
+    <label for="holdnavn">Nyt hold</label>
+    <input type="text" id="holdnavn" placeholder="fx MØK 2026 forår, hold A" required>
+  </div>
+  <button type="submit" class="sekundaer">Opret hold</button>
+</form>
+
+<div id="holdvisning" hidden>
+
+  <div class="vaerktoej">
+    <button type="button" class="sekundaer" id="visOpret">Opret studerende</button>
+    <button type="button" class="sekundaer" id="visKoder">Vis og udskriv koder</button>
+    <button type="button" class="sekundaer" id="opdater">Opdatér overblik</button>
+    <button type="button" class="sekundaer" id="eksporter">Hent resultater som CSV</button>
+    <button type="button" class="linkbtn" id="sletHold">Slet holdet og alle data</button>
+  </div>
+
+  <!-- Opret studerende -->
+  <section class="panel" id="opretpanel" hidden>
+    <h2>Opret studerende</h2>
+    <p class="sub">Indsæt én studerende pr. linje. Felterne må skilles med tabulator, semikolon eller komma, så et klip fra Excel virker direkte. Rækkefølgen er studienummer, navn, gruppe. Skriver du i stedet en linje som <code>Gruppe 3</code>, hører alle de følgende linjer til den gruppe, indtil næste overskrift.</p>
+    <textarea id="liste" spellcheck="false" placeholder="Gruppe 1&#10;201234&#9;Anne Jensen&#10;201235&#9;Bo Hansen&#10;&#10;Gruppe 2&#10;201236&#9;Cecilie Dam"></textarea>
+    <div class="raekke">
+      <button type="button" class="primaer" id="opretStuderende">Opret</button>
+      <p class="status" id="opretstatus" aria-live="polite"></p>
+    </div>
+    <div id="nyekoder" hidden>
+      <p class="hint">Koderne står kun her og under “Vis og udskriv koder”. Udlevér dem til de studerende.</p>
+      <div class="kodeliste" id="nyekoderliste"></div>
+    </div>
+  </section>
+
+  <!-- Koder -->
+  <section class="panel" id="kodepanel" hidden>
+    <h2>Adgangskoder</h2>
+    <p class="sub">Én linje pr. studerende, sorteret efter gruppe. Siden kan udskrives – kun listen kommer med.</p>
+    <div class="kodeliste" id="kodeliste"></div>
+  </section>
+
+  <!-- Overblik -->
+  <section class="panel">
+    <h2>Overblik</h2>
+    <p class="sub" id="overbliksub"></p>
+    <div id="overblik"></div>
+  </section>
+
+  <!-- Aktivitet -->
+  <section class="panel">
+    <h2>Aktivitet</h2>
+    <p class="sub" id="aktivitetsub"></p>
+    <div class="log" id="log"></div>
+  </section>
+
+</div>
+
+<footer>
+  <a class="linkbtn" href="login.html">De studerendes login</a>
+  <span>Slet holdets data, når semestret er slut.</span>
+</footer>
+
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/admin.js"></script>
+</body>
+</html>

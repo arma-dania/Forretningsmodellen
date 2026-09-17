@@ -10,12 +10,31 @@
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
+
+<div class="brugerbjaelke">
+<div class="wrap bjaelkeindhold">
+  <div>
+    <strong id="brugernavn">&nbsp;</strong>
+    <span id="brugerhold"></span>
+  </div>
+  <div class="bjaelkehoejre">
+    <span class="gemstatus" id="gemstatus" aria-live="polite"></span>
+    <button type="button" class="linkbtn" id="logud">Log ud</button>
+  </div>
+</div>
+</div>
+
 <div class="wrap">
+
+<p class="henter" id="henter">Henter gruppens besvarelse …</p>
+
+<div id="indhold" hidden>
 
 <div class="intro">
 <p class="kontekst">Sprint 2, Forretningsforståelse (NF1) – træning i at koble nøgletal og forretningsmodel</p>
 <h1>Gæt forretningsmodellen</h1>
 <p>Fem anonyme virksomheder, fem forretningsmodeller. Jeres opgave er at finde ud af, hvilken virksomhed der hører til hvilken model – alene ud fra nøgletallene. Øvelsen træner den bevægelse, der går fra tal til model: Hvad fortæller et nøgletal om, hvordan virksomheden tjener sine penge?</p>
+<p class="gruppeinfo" id="gruppemedlemmer"></p>
 <ol class="gang">
 <li>Diskutér hver profil i gruppen. Klik på et nøgletals navn for at se definitionen.</li>
 <li>Vælg den forretningsmodel, I mener passer, og skriv en begrundelse, der peger på konkrete nøgletal.</li>
@@ -62,11 +81,13 @@
 <footer>
 <button type="button" class="linkbtn" id="nulstil">Start runden forfra</button>
 <button type="button" class="linkbtn" id="facit">Underviser: vis facit uden at tjekke</button>
-<span>Svarene gemmes kun i denne browser.</span>
+<span>Gruppens svar gemmes løbende, så I kan fortsætte fra en anden skærm.</span>
 </footer>
 
 </div>
+</div>
 
+<script src="assets/api.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/app.js"></script>
 </body>

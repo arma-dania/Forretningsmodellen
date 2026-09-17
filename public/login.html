@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log ind – Gæt forretningsmodellen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="wrap smal">
+
+<p class="kontekst">Sprint 2, Forretningsforståelse (NF1)</p>
+<h1>Gæt forretningsmodellen</h1>
+<p class="manchet">Skriv den adgangskode, du har fået af underviseren. Så finder øvelsen selv din gruppe, og I arbejder videre på gruppens fælles besvarelse.</p>
+
+<form class="loginboks" id="form" autocomplete="off">
+  <label for="kode">Adgangskode</label>
+  <input type="text" id="kode" name="kode" placeholder="fx bxkm-7p4r" autocapitalize="off"
+         autocorrect="off" spellcheck="false" inputmode="text" required>
+  <p class="status" id="status" aria-live="polite"></p>
+  <button type="submit" class="primaer" id="knap">Log ind</button>
+</form>
+
+<p class="fodnote">Koden er personlig og gælder kun denne øvelse. Har du mistet den, får du en ny af underviseren.</p>
+
+<footer>
+  <a class="linkbtn" href="admin.html">Underviser</a>
+</footer>
+
+</div>
+
+<script src="assets/api.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+if (new URLSearchParams(location.search).has("udloebet")) {
+  $("status").textContent = "I blev logget ud, fordi der gik for lang tid. Log ind igen – jeres svar er gemt.";
+}
+
+$("form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const kode = $("kode").value.trim();
+  if (!kode) return;
+  $("knap").disabled = true;
+  $("status").className = "status";
+  $("status").textContent = "Logger ind …";
+  try {
+    await API.login(kode);
+    location.href = "index.html";
+  } catch (fejl) {
+    $("status").className = "status bad";
+    $("status").textContent = fejl.message;
+    $("knap").disabled = false;
+    $("kode").select();
+  }
+});
+</script>
+</body>
+</html>
