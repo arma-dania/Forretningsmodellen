@@ -60,5 +60,40 @@ delete process.env.SESSION_HEMMELIGHED;
 svar = await kald(api, "/api/login", { kode: "abcd-efgh" });
 ok("ukendt studenterkode giver 401 uanset", svar.status === 401, String(svar.status));
 
+console.log("\n=== Spor staar to steder og skal stemme ===");
+// Klienten bruger spor til at fremhaeve celler i hintet; serveren bruger dem
+// til at rette begrundelserne. Falder de fra hinanden, retter serveren efter
+// andre noegletal end dem, de studerende blev peget paa.
+{
+  const fs = await import("node:fs");
+  const kilde = fs.readFileSync(path.join(ROD, "public/assets/data.js"), "utf8");
+  const ctx = {};
+  new Function("g", kilde + "; g.R = RUNDER;")(ctx);
+  const facit = await import(path.join(ROD, "netlify/functions/lib/facit.mjs"));
+
+  let afvigelser = [];
+  ctx.R.forEach((r, runde) => {
+    for (const p of r.profiler) {
+      const klient = JSON.stringify(p.spor);
+      const server = JSON.stringify(facit.sporFor(runde, p.id));
+      if (klient !== server) afvigelser.push(`runde ${runde + 1} profil ${p.id}: ${klient} mod ${server}`);
+    }
+  });
+  ok("spor er ens i data.js og facit.mjs", afvigelser.length === 0, afvigelser.join("; "));
+
+  const profilerIData = ctx.R.flatMap((r, i) => r.profiler.map(p => `${i}/${p.id}`)).sort();
+  const profilerIFacit = [...Array(facit.antalRunder()).keys()]
+    .flatMap(i => facit.profilIder(i).map(id => `${i}/${id}`)).sort();
+  ok("samme profiler begge steder", JSON.stringify(profilerIData) === JSON.stringify(profilerIFacit));
+
+  const modeller = ctx.R.map(r => r.modeller.map(m => m.id));
+  const facitModeller = [...Array(facit.antalRunder()).keys()]
+    .map(i => facit.profilIder(i).map(id => facit.rigtigModel(i, id)));
+  ok("hvert facit peger paa en model, der findes i runden",
+     facitModeller.every((liste, i) => liste.every(m => modeller[i].includes(m))));
+  ok("hver model bruges praecis en gang pr. runde",
+     facitModeller.every(liste => new Set(liste).size === liste.length));
+}
+
 console.log(fejlede ? `\n${fejlede} FEJLEDE\n` : "\nAlle kontroller bestaaet.\n");
 process.exit(fejlede ? 1 : 0);

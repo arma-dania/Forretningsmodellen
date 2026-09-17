@@ -162,3 +162,51 @@ td.l,th.l{text-align:left}
   .brugerbjaelke,.vaerktoej,.raekke,footer,.holdliste,.primaer,.sekundaer,.linkbtn{display:none !important}
   .kodeliste{max-height:none;border:none;background:none}
 }
+
+/* ============================================================
+   Resultater og benchmark
+   ============================================================ */
+:root{ --maalebane:rgba(30,34,38,.07); }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --maalebane:rgba(229,226,219,.09); } }
+:root[data-theme="dark"]{ --maalebane:rgba(229,226,219,.09); }
+
+/* Stat-felter: holdets hovedtal er tal, ikke søjler. */
+.stattavle{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:.75rem;margin:1rem 0 2rem}
+.stat{border-left:3px solid var(--okker);padding:.1rem 0 .1rem .8rem}
+.stat .tal{font-family:var(--serif);font-size:1.9rem;line-height:1.1;font-variant-numeric:tabular-nums;display:block}
+.stat .mrk{font-size:.85rem;color:var(--muted)}
+
+/* Én serie, én farve. Søjlen vokser fra en fælles grundlinje, og værdien
+   står ved spidsen i tekstfarve – aldrig i søjlens farve. */
+.soejler{margin:.5rem 0 1.5rem}
+.soejle{display:grid;grid-template-columns:minmax(7rem,15rem) 1fr auto;gap:.75rem;align-items:center;
+  padding:.28rem 0;font-size:.9rem}
+.soejle + .soejle{border-top:2px solid var(--panel)}
+.soejle .navn{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.soejle .navn[title]{cursor:help}
+/* Baade bane og fyld skal vaere blokke. Et inline-span tager hverken hoejde
+   eller bredde, og soejlen ville staa tom. */
+.soejle .bane{display:block;background:var(--maalebane);height:14px;border-radius:0 2px 2px 0}
+.soejle .fyld{display:block;background:var(--okker);height:100%;border-radius:0 4px 4px 0;min-width:2px}
+.soejle .vaerdi{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;min-width:4.5rem;text-align:right}
+.soejle.ingen .fyld{background:var(--maalebane)}
+.soejle.ingen .vaerdi{font-style:italic}
+.soejlenote{font-size:.85rem;color:var(--muted);margin:.1rem 0 1rem}
+
+.sorterbar th{cursor:pointer;user-select:none;white-space:nowrap}
+.sorterbar th[aria-sort]{color:var(--okker)}
+.sorterbar th[aria-sort]::after{content:" ↓"}
+.sorterbar th[aria-sort="ascending"]::after{content:" ↑"}
+.daek{font-variant-numeric:tabular-nums}
+.daek.tynd{color:var(--bad)}
+.forveksling{font-size:.85rem;color:var(--muted)}
+h3.afsnit{font-family:var(--serif);font-size:1.3rem;margin:2rem 0 .3rem}
+
+/* På en smal skærm æder navnet og værdien bredden, så søjlen bliver til en
+   streg. Navnet flytter derfor op på egen linje, og søjlen får hele bredden. */
+@media (max-width:34rem){
+  .soejle{grid-template-columns:1fr auto;grid-template-areas:"navn vaerdi" "bane bane";gap:.15rem .75rem;padding:.4rem 0}
+  .soejle .navn{grid-area:navn;white-space:normal}
+  .soejle .vaerdi{grid-area:vaerdi}
+  .soejle .bane{grid-area:bane;margin-top:.15rem}
+}

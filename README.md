@@ -42,10 +42,57 @@ sin skærm og fortsætte i næste lektion. Gemmer to gruppemedlemmer forskelligt
 samtidig, får den sidste besked og henter gruppens udgave ind i stedet for at
 overskrive den.
 
-**Efter timen.** Under `Overblik` ser du pr. gruppe, hvor mange profiler der
-sad i første forsøg, hvad det endte med, hvor mange hint der blev brugt, og
-hvad grupperne skrev. Under `Aktivitet` ser du, hvem der har været inde og
+**Efter timen.** Under `Resultater` står holdets tal, grupperne rangeret efter
+score, og hvilke profiler der sad sværest. Under `Gruppernes svar` kan du læse
+alt, hvad de skrev. Under `Aktivitet` ser du, hvem der har været inde og
 hvornår. `Hent resultater som CSV` giver en fil, du kan åbne i Excel.
+
+## Hvordan arbejdet rettes
+
+**Modelvalget** rettes entydigt på serveren. Både første bud og det endelige
+svar gemmes, så en gruppe, der retter sig selv i andet forsøg, kan skelnes fra
+en, der ramte med det samme.
+
+**Begrundelserne** kan ikke rettes entydigt af en maskine, og appen påstår ikke
+at kunne det. I stedet måles noget snævrere og ærligere: peger begrundelsen på
+de nøgletal, der faktisk afslører profilen? Hver profil har tre sådanne
+nøgletal – de samme, som hintet fremhæver – og en begrundelse får 0 til 3 alt
+efter, hvor mange den nævner. Ordene, der tæller som en henvisning, står i
+`netlify/functions/lib/retning.mjs` og kan udvides, når du ser, hvad de
+studerende faktisk skriver.
+
+Det er et fingerpeg om, hvor der skal kigges nærmere, ikke en karakter. En
+begrundelse kan nævne alle tre nøgletal og stadig ræsonnere forkert, og
+omvendt. Derfor står alle begrundelser i fuld længde i `Gruppernes svar`.
+
+**Scoren** vejer tre ting, og vægtene står ét sted i `retning.mjs`:
+
+| Del | Vægt | Hvorfor |
+| --- | --- | --- |
+| Rigtige i første forsøg | 50 % | Det er her, læringen ligger – at læse tallene, før man får at vide, om man ramte |
+| Rigtige til sidst | 20 % | At rette sig selv tæller også, men mindre |
+| Begrundelser | 30 % | Øvelsen handler om at kunne pege på tallene, ikke om at gætte rigtigt |
+
+Er vægtene forkerte for dit hold, så flyt dem. Kun afsluttede runder tæller,
+så en runde i gang ikke ser ud som en dårlig præstation. Hint trækker ikke ned
+– at bede om hjælp er en del af at lære – men antallet vises.
+
+## Benchmark
+
+`Resultater` sammenligner på tre niveauer:
+
+- **Holdet**: gennemsnit, median og spænd, og hvor mange grupper der er færdige.
+- **Grupperne**: samlet score, højest øverst. Hold musen over en søjle for
+  opdelingen i rigtige, begrundelser og hint.
+- **Profilerne**: hvor stor en andel af grupperne der ramte hver profil i
+  første forsøg, og hvilken model den oftest blev forvekslet med. Det er den
+  liste, der siger, hvad opsamlingen skal bruge tid på.
+
+De studerende står i en sorterbar tabel. **Bemærk, at scoren dér er gruppens,
+ikke den enkeltes.** Besvarelsen er fælles, så alle i en gruppe har samme
+resultat; det eneste, der er den enkeltes, er deltagelsen – logins, handlinger
+og hint. Tabellen kan altså vise, hvem der ikke har været inde, men ikke hvem
+i gruppen der tænkte hvad.
 
 ## Sådan sætter du det op
 

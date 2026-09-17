@@ -37,7 +37,7 @@ ok("dubletter springes over", igen.oprettede.length === 0 && igen.sprunget.lengt
 // liste, hvor nummeret står forrest, skal nummeret kasseres – ikke havne
 // som navn og ikke følge med i eksporten.
 const { data:gammel } = await a("POST",`/admin-api/hold/${hold.id}/studerende`,
-  {liste:"Gruppe 3\n201240\tErik Foss\n201241;Frida G\u00e5rd\n201242"});
+  {liste:"Gruppe 3\n201240\tErik Foss\n201241;Frida Gård\n201242"});
 ok("numre i en gammel liste kasseres", gammel.oprettede.length===2 &&
    gammel.oprettede.every(s=>!/\d/.test(s.navn)), gammel.oprettede.map(s=>s.navn).join(", "));
 ok("en linje med kun et nummer bliver ikke til en studerende",
@@ -75,7 +75,15 @@ ok("konflikten leverer gruppens udgave", konflikt.data.besvarelse.valg.A==="elek
 
 console.log("\n=== Foerste tjek (tre rigtige, to forkerte) ===");
 const delvis = {A:"elektronik", B:"moebel", C:"saas", D:"konsulent", E:"supermarked"};
-const grunde = Object.fromEntries("ABCDE".split("").map(k=>[k,"En begrundelse der er laengere end femogtyve tegn."]));
+// Begrundelser med forskellig kvalitet, så retningen af dem kan måles:
+// A rammer alle tre afslørende nøgletal, B to, C ét, D og E ingen.
+const grunde = {
+  A:"Lav bruttomargin, kapitalen vender hurtigt, og kunderne betaler kontant.",
+  B:"Stort varelager og mange anlægsaktiver fra egen fabrik.",
+  C:"Bruttomarginen er næsten 90 procent, hvilket er meget højt.",
+  D:"Den her passer vist bedst til beskrivelsen af forretningen.",
+  E:"Vi gik efter mavefornemmelsen og synes, den ligner mest.",
+};
 ok("ufuldstaendigt svar afvises", (await s1("POST","/api/tjek/0",{valg:{A:"elektronik"}, grund:grunde})).status === 400);
 ok("samme model to gange afvises", (await s1("POST","/api/tjek/0",{valg:{A:"saas",B:"saas",C:"moebel",D:"konsulent",E:"supermarked"}, grund:grunde})).status === 400);
 const { data:t1 } = await s1("POST","/api/tjek/0",{valg:delvis, grund:grunde});
@@ -118,12 +126,46 @@ ok("tre grupper i overblikket", o.grupper.length===3, o.grupper.map(g=>g.navn).j
 ok("overblik uden studienumre", o.grupper.every(g=>g.medlemmer.every(m=>m.studienummer===undefined)));
 const gr1 = o.grupper.find(g=>g.navn==="Gruppe 1");
 ok("gruppe 1 har to medlemmer", gr1.medlemmer.length===2);
-ok("runde 1 er afsluttet", gr1.runder[0].status==="afsluttet", gr1.runder[0].status);
-ok("resultat: 3 i foerste, 5 samlet", gr1.runder[0].rigtigeFoerste===3 && gr1.runder[0].rigtigeSlut===5,
-   `${gr1.runder[0].rigtigeFoerste}/${gr1.runder[0].ialt} og ${gr1.runder[0].rigtigeSlut}/${gr1.runder[0].ialt}`);
-ok("begrundelser er med", !!gr1.runder[0].begrundelser.A);
+const r1 = gr1.runder[0];
+ok("runde 1 er afsluttet", r1.status==="afsluttet", r1.status);
+ok("resultat: 3 i foerste, 5 samlet", r1.rigtigeFoerste===3 && r1.rigtigeSlut===5,
+   `${r1.rigtigeFoerste}/${r1.ialt} og ${r1.rigtigeSlut}/${r1.ialt}`);
+ok("begrundelsernes tekst er med", r1.profiler.find(p=>p.profil==="A").tekst.startsWith("Lav bruttomargin"));
+
+console.log("  -- retning af begrundelserne --");
+const daek = id => r1.profiler.find(p=>p.profil===id).begrundelse;
+ok("staerk begrundelse: 3 af 3 noegletal", daek("A").naevnte.length===3, JSON.stringify(daek("A").naevnte));
+ok("delvis begrundelse: 2 af 3", daek("B").naevnte.length===2, JSON.stringify(daek("B").naevnte));
+ok("tynd begrundelse: 1 af 3", daek("C").naevnte.length===1, JSON.stringify(daek("C").naevnte));
+ok("indholdsloes begrundelse: 0 af 3", daek("D").naevnte.length===0 && daek("E").naevnte.length===0);
+ok("mangler-listen udfylder resten", daek("C").mangler.length===2, JSON.stringify(daek("C").mangler));
+
+console.log("  -- score --");
+ok("runden har en score", Number.isInteger(r1.score), String(r1.score));
+// 3/5 i foerste (0,5), 5/5 samlet (0,2), begrundelser (3+2+1+0+0)/15 = 0,4 (0,3)
+const ventet = Math.round(100*(0.5*(3/5) + 0.2*1 + 0.3*(6/15)));
+ok("scoren foelger vaegtene", r1.score===ventet, `${r1.score} = ${ventet}`);
+ok("gruppen har en samlet score", gr1.score!==null, String(gr1.score));
+ok("uafsluttet runde taeller ikke med", gr1.runder[1].score===null);
 const gr2 = o.grupper.find(g=>g.navn==="Gruppe 2");
 ok("gruppe 2: facit vist i runde 2", gr2.runder[1].status==="facit vist", gr2.runder[1].status);
+
+console.log("\n=== Benchmark paa holdet ===");
+ok("benchmark er med", !!o.benchmark, JSON.stringify(o.benchmark));
+ok("vaegtene oplyses", o.benchmark.vaegte.foersteForsoeg===0.5);
+ok("snit og median beregnet", Number.isInteger(o.benchmark.snit) && Number.isInteger(o.benchmark.median),
+   `snit ${o.benchmark.snit}, median ${o.benchmark.median}`);
+ok("spaend oplyses", o.benchmark.lavest<=o.benchmark.hoejest);
+ok("kun grupper med afsluttet runde taeller", o.benchmark.antalMedScore < o.benchmark.antalGrupper,
+   `${o.benchmark.antalMedScore} af ${o.benchmark.antalGrupper}`);
+
+console.log("  -- profilernes svaerhed --");
+const sv = o.svaerhed[0].profiler;
+ok("svaerhed pr. profil", sv.length===5);
+ok("profil A: alle ramte foerst", sv.find(p=>p.profil==="A").rigtigeFoerste===1);
+ok("profil D: ingen ramte foerst", sv.find(p=>p.profil==="D").rigtigeFoerste===0);
+ok("hyppigste forveksling registreret", sv.find(p=>p.profil==="D").hyppigsteFejl==="konsulent",
+   sv.find(p=>p.profil==="D").hyppigsteFejl);
 ok("aktivitet paa den enkelte", gr1.medlemmer.find(m=>m.navn==="Anne Jensen").logins===1);
 ok("Anne er registreret aktiv", !!gr1.medlemmer.find(m=>m.navn==="Anne Jensen").sidst);
 ok("haendelser logget", o.antalHaendelser > 5, o.antalHaendelser+" handlinger");
@@ -138,6 +180,7 @@ const linjer = eks.data.split("\n");
 ok("CSV har overskrift og raekker", linjer.length > 20, linjer.length+" linjer");
 ok("CSV har ingen studienummer-kolonne", !linjer[0].includes("studienummer"), linjer[0].slice(0,80));
 const gr1linje = linjer.find(l => l.includes("Anne Jensen") && l.includes('";"A";'));
+ok("CSV har kolonner til retningen", linjer[0].includes("noegletal_naevnt") && linjer[0].includes("gruppens_score"));
 ok("CSV rummer Gruppe 1's svar og facit", !!gr1linje && gr1linje.includes("elektronik"), (gr1linje||"").slice(0,130));
 ok("CSV skelner slutresultat fra foerste forsoeg",
    linjer.some(l => l.includes("Anne Jensen") && l.includes('"supermarked";"supermarked";"ja";"nej"')),

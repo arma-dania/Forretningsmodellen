@@ -4,6 +4,7 @@ import { json, fejl, krop, klientIp, ruter } from "./lib/svar.mjs";
 import * as auth from "./lib/auth.mjs";
 import * as lager from "./lib/lager.mjs";
 import { antalRunder, profilIder, rigtigModel } from "./lib/facit.mjs";
+import { retGruppe, profilernesSvaerhed, vurderBegrundelse, VAEGTE } from "./lib/retning.mjs";
 
 const MAKS_FORSOEG = 8;
 const VINDUE_MS = 15 * 60e3;
@@ -198,54 +199,47 @@ const oversigt = (req, ctx) =>
       lager.hentHaendelserPaaHold(holdId),
     ]);
 
-    const perStuderende = new Map(studerende.map(s => [s.id, { logins: 0, handlinger: 0, sidst: null }]));
+    const perStuderende = new Map(studerende.map(s => [s.id, { logins: 0, handlinger: 0, hint: 0, sidst: null }]));
     for (const h of haendelser) {
       const p = perStuderende.get(h.studId);
       if (!p) continue;
       if (h.type === "login") p.logins += 1;
+      if (h.type === "hint") p.hint += 1;
       p.handlinger += 1;
       if (!p.sidst || h.tid > p.sidst) p.sidst = h.tid;
     }
 
-    const gruppeRaekker = grupper.map(g => {
-      const medlemmer = studerende.filter(s => s.gruppeId === g.id);
-      const runder = [...Array(antalRunder()).keys()].map(runde => {
-        const b = besvarelser.find(x => x.runde === runde && x.gruppeId === g.id) ?? null;
-        // Gruppen kan have fundet en gruppe-id gennem nøglen; find via medlemmernes gruppe.
-        if (!b) return { runde, status: "ikke begyndt" };
-        const ialt = profilIder(runde).length;
-        return {
-          runde,
-          status: b.tjek >= 2 ? (b.facitVist ? "facit vist" : "afsluttet") : b.tjek === 1 ? "andet forsøg" : "i gang",
-          rigtigeFoerste: Object.values(b.rigtigFoerste ?? {}).filter(Boolean).length,
-          rigtigeSlut: profilIder(runde).filter(id => b.valg?.[id] === rigtigModel(runde, id)).length,
-          ialt,
-          hint: Object.values(b.hint ?? {}).filter(Boolean).length,
-          begrundelser: Object.fromEntries(profilIder(runde).map(id => [id, b.grund?.[id] ?? ""])),
-          valg: b.valg ?? {},
-          refleksion: b.refl ?? [],
-          opdateret: b.opdateret ?? null,
-          opdateretAf: b.opdateretAf ?? null,
-        };
-      });
-      return {
-        id: g.id,
-        navn: g.navn,
-        medlemmer: medlemmer.map(s => ({
-          id: s.id,
-          navn: s.navn,
-          kode: s.kode,
-          sidstSet: s.sidstSet,
-          ...perStuderende.get(s.id),
-        })),
-        runder,
-      };
-    });
+    const gruppeRaekker = grupper.map(g => ({
+      id: g.id,
+      navn: g.navn,
+      medlemmer: studerende
+        .filter(s => s.gruppeId === g.id)
+        .map(s => ({ id: s.id, navn: s.navn, kode: s.kode, sidstSet: s.sidstSet, ...perStuderende.get(s.id) })),
+      ...retGruppe(antalRunder(), besvarelser.filter(b => b.gruppeId === g.id)),
+    })).sort((a, b) => a.navn.localeCompare(b.navn, "da", { numeric: true }));
+
+    // Holdets tal. Kun grupper, der har afsluttet mindst én runde, tæller med –
+    // ellers ville en gruppe, der ikke er begyndt, trække gennemsnittet ned.
+    const scorer = gruppeRaekker.map(g => g.score).filter(s => s !== null).sort((a, b) => a - b);
+    const median = scorer.length
+      ? scorer.length % 2 ? scorer[(scorer.length - 1) / 2]
+        : Math.round((scorer[scorer.length / 2 - 1] + scorer[scorer.length / 2]) / 2)
+      : null;
 
     return json({
       hold,
       antalRunder: antalRunder(),
-      grupper: gruppeRaekker.sort((a, b) => a.navn.localeCompare(b.navn, "da", { numeric: true })),
+      grupper: gruppeRaekker,
+      benchmark: {
+        vaegte: VAEGTE,
+        antalMedScore: scorer.length,
+        antalGrupper: gruppeRaekker.length,
+        snit: scorer.length ? Math.round(scorer.reduce((a, b) => a + b, 0) / scorer.length) : null,
+        median,
+        lavest: scorer[0] ?? null,
+        hoejest: scorer[scorer.length - 1] ?? null,
+      },
+      svaerhed: profilernesSvaerhed(antalRunder(), gruppeRaekker),
       udenGruppe: studerende.filter(s => !grupper.some(g => g.id === s.gruppeId)).length,
       senesteHaendelser: haendelser.sort((a, b) => b.tid.localeCompare(a.tid)).slice(0, 150),
       antalHaendelser: haendelser.length,
@@ -266,27 +260,32 @@ const eksport = (req, ctx) =>
     const gruppeNavn = new Map(grupper.map(g => [g.id, g.navn]));
 
     const linjer = [
-      ["hold", "gruppe", "navn", "sidst_set", "runde", "profil", "valgt_model", "rigtig_model", "rigtig", "rigtig_foerste_forsoeg", "hint_brugt", "begrundelse"]
+      ["hold", "gruppe", "navn", "sidst_set", "gruppens_score", "runde", "profil", "valgt_model",
+       "rigtig_model", "rigtig", "rigtig_foerste_forsoeg", "hint_brugt",
+       "noegletal_naevnt", "noegletal_afsloerende", "begrundelse_tegn", "begrundelse"]
         .map(csvFelt)
         .join(";"),
     ];
     for (const s of studerende) {
       const gNavn = gruppeNavn.get(s.gruppeId) ?? "";
       const gBesvarelser = besvarelser.filter(b => b.gruppeId === s.gruppeId);
+      const gScore = retGruppe(antalRunder(), gBesvarelser).score;
       if (!gBesvarelser.length) {
-        linjer.push([hold.navn, gNavn, s.navn, s.sidstSet ?? "", "", "", "", "", "", "", "", ""].map(csvFelt).join(";"));
+        linjer.push([hold.navn, gNavn, s.navn, s.sidstSet ?? "", "", "", "", "", "", "", "", "", "", "", ""].map(csvFelt).join(";"));
         continue;
       }
       for (const b of gBesvarelser.sort((a, x) => a.runde - x.runde)) {
         for (const profil of profilIder(b.runde)) {
           const rigtig = rigtigModel(b.runde, profil);
+          const v = vurderBegrundelse(b.runde, profil, b.grund?.[profil]);
           linjer.push(
             [
-              hold.navn, gNavn, s.navn, s.sidstSet ?? "",
+              hold.navn, gNavn, s.navn, s.sidstSet ?? "", gScore ?? "",
               b.runde + 1, profil, b.valg?.[profil] ?? "", rigtig,
               b.valg?.[profil] === rigtig ? "ja" : "nej",
               b.rigtigFoerste?.[profil] ? "ja" : "nej",
               b.hint?.[profil] ? "ja" : "nej",
+              v.naevnte.length, v.ialt, v.tegn,
               b.grund?.[profil] ?? "",
             ].map(csvFelt).join(";")
           );

@@ -197,6 +197,7 @@ async function hentOverblik() {
   $("gemstatus").textContent = "Henter …";
   try {
     overblik = await kald(`/admin-api/hold/${valgtHold}/oversigt`);
+    tegnResultater();
     tegnOverblik();
     tegnLog();
     if (!$("kodepanel").hidden) tegnKoder();
@@ -214,11 +215,141 @@ const maerke = r => {
   return `<span class="maerke i-gang">${esc(r.status)}</span>`;
 };
 
+// Modellernes navne står i assets/data.js, som også indlæses her. Filen
+// indeholder ikke facit, så der følger ikke noget følsomt med.
+const modelnavn = (runde, id) =>
+  id ? (RUNDER[runde]?.modeller.find(m => m.id === id)?.navn ?? id) : "(ikke valgt)";
+
+const pct = a => Math.round(a * 100);
+
+/* ---------- Søjler ----------
+   Én serie, én farve. Søjlen viser størrelse; værdien står ved spidsen i
+   tekstfarve, så tallet aldrig skal aflæses af farven alene. Tallene står
+   desuden i tabellerne nedenfor, så intet er låst inde i en grafik. */
+function soejler(raekker, maks = 100) {
+  return raekker
+    .map(r => {
+      const bredde = r.vaerdi === null ? 0 : Math.max(0, Math.min(100, (r.vaerdi / maks) * 100));
+      return `<div class="soejle${r.vaerdi === null ? " ingen" : ""}"${r.titel ? ` title="${esc(r.titel)}"` : ""}>
+        <span class="navn" title="${esc(r.navn)}">${esc(r.navn)}</span>
+        <span class="bane"><span class="fyld" style="width:${bredde}%"></span></span>
+        <span class="vaerdi">${esc(r.etiket)}</span>
+      </div>`;
+    })
+    .join("");
+}
+
+function tegnResultater() {
+  const b = overblik.benchmark;
+  $("resultatsub").textContent =
+    `Modelvalget rettes entydigt. Begrundelserne måles på, om de peger på de nøgletal, ` +
+    `der faktisk afslører profilen – det er et fingerpeg, ikke en karakter. Scoren vejer ` +
+    `første forsøg ${pct(b.vaegte.foersteForsoeg)} %, slutresultatet ${pct(b.vaegte.samlet)} % ` +
+    `og begrundelserne ${pct(b.vaegte.begrundelser)} %.`;
+
+  const stat = (tal, mrk) => `<div class="stat"><span class="tal">${tal}</span><span class="mrk">${esc(mrk)}</span></div>`;
+  $("stattavle").innerHTML = b.antalMedScore
+    ? stat(b.snit, "gennemsnit") + stat(b.median, "median") +
+      stat(`${b.lavest}–${b.hoejest}`, "spænd") +
+      stat(`${b.antalMedScore}/${b.antalGrupper}`, "grupper færdige")
+    : "<p class='sub'>Ingen grupper har afsluttet en runde endnu.</p>";
+
+  // Grupperne, sorteret efter score. Grupper uden afsluttet runde står sidst.
+  const sorteret = [...overblik.grupper].sort((x, y) => (y.score ?? -1) - (x.score ?? -1));
+  $("gruppesub").textContent = b.antalMedScore
+    ? "Samlet score pr. gruppe, højest øverst. Hold musen over en søjle for opdelingen."
+    : "";
+  $("gruppesoejler").innerHTML = soejler(
+    sorteret.map(g => ({
+      navn: g.navn,
+      vaerdi: g.score,
+      etiket: g.score === null ? "ikke afsluttet" : `${g.score} / 100`,
+      titel: g.score === null
+        ? "Gruppen har ikke afsluttet en runde endnu."
+        : `${g.rigtigeFoerste}/${g.ialt} rigtige i første forsøg, ${g.rigtigeSlut}/${g.ialt} til sidst. ` +
+          `Begrundelserne peger på ${pct(g.begrundelseAndel)} % af de afslørende nøgletal. ${g.hint} hint brugt.`,
+    }))
+  );
+
+  // Profilernes sværhed pr. runde.
+  $("profilsoejler").innerHTML = overblik.svaerhed
+    .map(r => {
+      const medSvar = r.profiler.filter(p => p.grupper > 0);
+      if (!medSvar.length) return "";
+      const raekker = medSvar.map(p => ({
+        navn: `Profil ${p.profil} – ${modelnavn(r.runde, p.rigtigModel)}`,
+        vaerdi: pct(p.rigtigeFoerste / p.grupper),
+        etiket: `${p.rigtigeFoerste}/${p.grupper}`,
+        titel: `${p.rigtigeSlut}/${p.grupper} ramte til sidst. ${p.hint} brugte hint. ` +
+          `Begrundelserne peger på ${pct(p.begrundelseAndel)} % af de afslørende nøgletal.`,
+      }));
+      const fejl = medSvar
+        .filter(p => p.hyppigsteFejl)
+        .map(p => `Profil ${p.profil} blev oftest forvekslet med ${esc(modelnavn(r.runde, p.hyppigsteFejl))} (${p.antalFejl} ${p.antalFejl === 1 ? "gruppe" : "grupper"})`);
+      return `<p class="soejlenote"><strong>Runde ${r.runde + 1}</strong></p>
+        <div class="soejler">${soejler(raekker)}</div>
+        ${fejl.length ? `<p class="forveksling">${fejl.join(". ")}.</p>` : ""}`;
+    })
+    .join("");
+
+  tegnStuderende();
+}
+
+/* ---------- De studerende ----------
+   Scoren er gruppens. Det individuelle er deltagelsen, og den står for sig,
+   så tabellen ikke kommer til at ligne en rangliste over enkeltpersoner. */
+let studSort = { felt: "navn", op: true };
+
+function tegnStuderende() {
+  const raekker = overblik.grupper.flatMap(g =>
+    g.medlemmer.map(m => ({
+      navn: navnPaa(m), gruppe: g.navn, score: g.score,
+      logins: m.logins, handlinger: m.handlinger, hint: m.hint, sidst: m.sidst,
+    }))
+  );
+  if (!raekker.length) { $("studerendetavle").innerHTML = "<p class='sub'>Ingen studerende endnu.</p>"; return; }
+
+  const { felt, op } = studSort;
+  raekker.sort((a, x) => {
+    const [p, q] = [a[felt], x[felt]];
+    const c = typeof p === "number" || typeof q === "number"
+      ? (p ?? -1) - (q ?? -1)
+      : String(p ?? "").localeCompare(String(q ?? ""), "da", { numeric: true });
+    return op ? c : -c;
+  });
+
+  const kolonner = [
+    ["navn", "Studerende", "l"], ["gruppe", "Gruppe", "l"], ["score", "Gruppens score", ""],
+    ["logins", "Logins", ""], ["handlinger", "Handlinger", ""], ["hint", "Hint", ""], ["sidst", "Senest aktiv", "l"],
+  ];
+  $("studerendetavle").innerHTML = `<div class="tabelwrap"><table class="admin sorterbar"><thead><tr>${kolonner
+    .map(([n, t, k]) => `<th class="${k}${n === "navn" ? " navn" : ""}" scope="col" data-sort="${n}"${
+      felt === n ? ` aria-sort="${op ? "ascending" : "descending"}"` : ""}>${t}</th>`)
+    .join("")}</tr></thead><tbody>${raekker
+    .map(r => `<tr>
+      <th class="navn l" scope="row">${esc(r.navn)}</th>
+      <td class="l">${esc(r.gruppe)}</td>
+      <td>${r.score === null ? "<span class='maerke ingen'>ingen</span>" : r.score}</td>
+      <td>${r.logins}</td><td>${r.handlinger}</td><td>${r.hint}</td>
+      <td class="l">${r.sidst ? dato(r.sidst) : "<span class='maerke ingen'>aldrig</span>"}</td>
+    </tr>`)
+    .join("")}</tbody></table></div>`;
+}
+
+$("studerendetavle").addEventListener("click", e => {
+  const th = e.target.closest("[data-sort]");
+  if (!th) return;
+  const felt = th.dataset.sort;
+  studSort = { felt, op: studSort.felt === felt ? !studSort.op : felt === "navn" || felt === "gruppe" };
+  tegnStuderende();
+});
+
+/* ---------- Gruppernes svar ---------- */
 function tegnOverblik() {
   const antal = overblik.grupper.reduce((n, g) => n + g.medlemmer.length, 0);
   $("overbliksub").textContent =
-    `${esc(overblik.hold.navn)}: ${antal} studerende i ${overblik.grupper.length} ` +
-    `${overblik.grupper.length === 1 ? "gruppe" : "grupper"}. Besvarelsen deles i gruppen, aktiviteten følger den enkelte.`;
+    `${overblik.hold.navn}: ${antal} studerende i ${overblik.grupper.length} ` +
+    `${overblik.grupper.length === 1 ? "gruppe" : "grupper"}.`;
 
   if (!overblik.grupper.length) {
     $("overblik").innerHTML = "<p class='sub'>Ingen grupper endnu. Opret studerende ovenfor.</p>";
@@ -232,43 +363,44 @@ function tegnOverblik() {
           <th class="l" scope="col">Kode</th><th scope="col">Logins</th>
           <th scope="col">Handlinger</th><th class="l" scope="col">Senest aktiv</th><th></th>
         </tr></thead><tbody>${g.medlemmer
-          .map(
-            m => `<tr><th class="navn l" scope="row">${esc(navnPaa(m))}</th>
+          .map(m => `<tr><th class="navn l" scope="row">${esc(navnPaa(m))}</th>
               <td class="kode">${esc(m.kode)}</td>
               <td>${m.logins}</td><td>${m.handlinger}</td>
               <td class="l">${m.sidst ? dato(m.sidst) : "<span class='maerke ingen'>aldrig</span>"}</td>
-              <td><button type="button" class="linkbtn" data-nykode="${m.id}">ny kode</button></td></tr>`
-          )
+              <td><button type="button" class="linkbtn" data-nykode="${m.id}">ny kode</button></td></tr>`)
           .join("")}</tbody></table></div>`;
 
       const runder = g.runder
         .map(r => {
-          if (r.status === "ikke begyndt") return `<p><strong>Runde ${r.runde + 1}</strong> ${maerke(r)}</p>`;
-          const svar = Object.entries(r.begrundelser)
-            .map(
-              ([profil, tekst]) =>
-                `<li>Profil ${esc(profil)}: ${esc(modelnavn(r.runde, r.valg[profil]))}
-                  <span class="begrundelse">${esc(tekst) || "<em>ingen begrundelse</em>"}</span></li>`
-            )
+          if (!r.begyndt) return `<p><strong>Runde ${r.runde + 1}</strong> ${maerke(r)}</p>`;
+          const svar = r.profiler
+            .map(p => {
+              const v = p.begrundelse;
+              const tynd = v.naevnte.length === 0 ? " tynd" : "";
+              return `<li>Profil ${esc(p.profil)}: ${esc(modelnavn(r.runde, p.valgt))}
+                ${p.rigtigFoerst ? "<span class='maerke ok'>første forsøg</span>"
+                  : p.rigtigTilSidst ? "<span class='maerke i-gang'>andet forsøg</span>"
+                  : `<span class='maerke facit'>forkert – ${esc(modelnavn(r.runde, p.rigtig))}</span>`}
+                <span class="daek${tynd}">peger på ${v.naevnte.length}/${v.ialt} afslørende nøgletal</span>
+                <span class="begrundelse">${esc(p.tekst) || "<em>ingen begrundelse</em>"}</span></li>`;
+            })
             .join("");
-          const refl = (r.refleksion || []).filter(x => x && x.trim());
+          const refl = (r.refleksion || []).filter(x => x);
           return `<p><strong>Runde ${r.runde + 1}</strong> ${maerke(r)}
-              — første forsøg ${r.rigtigeFoerste}/${r.ialt}, samlet ${r.rigtigeSlut}/${r.ialt},
+              ${r.score !== null ? `— score ${r.score}/100,` : "—"}
+              første forsøg ${r.rigtigeFoerste}/${r.ialt}, samlet ${r.rigtigeSlut}/${r.ialt},
               ${r.hint} hint. Senest ${dato(r.opdateret)}${r.opdateretAf ? ` af ${esc(r.opdateretAf)}` : ""}.</p>
             <ul class="svarliste">${svar}</ul>
             ${refl.length ? `<ul class="svarliste">${refl.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}`;
         })
         .join("");
 
-      return `<div class="gruppeblok"><h3>${esc(g.navn)}</h3>${medlemmer}${runder}</div>`;
+      return `<div class="gruppeblok"><h3>${esc(g.navn)}${
+        g.score !== null ? ` <span class="maerke ok">${g.score}/100</span>` : ""
+      }</h3>${medlemmer}${runder}</div>`;
     })
     .join("");
 }
-
-// Modellernes navne står i assets/data.js, som også indlæses her. Filen
-// indeholder ikke facit, så der følger ikke noget følsomt med.
-const modelnavn = (runde, id) =>
-  id ? (RUNDER[runde]?.modeller.find(m => m.id === id)?.navn ?? id) : "(ikke valgt)";
 
 $("overblik").addEventListener("click", async e => {
   const b = e.target.closest("[data-nykode]");

@@ -173,6 +173,10 @@ const tjek = (req, ctx) =>
       grund,
       tjek: nyTjek,
       rigtigFoerste,
+      // Selve første bud gemmes, ikke kun om det var rigtigt. Det er det,
+      // der viser underviseren, hvad grupperne forvekslede profilen med –
+      // og det kan ikke rekonstrueres, når svaret er rettet i andet forsøg.
+      valgFoerste: foersteForsoeg ? { ...valg } : nuvaerende.valgFoerste,
       facitVist: nuvaerende.facitVist || opgiv,
       version: nuvaerende.version + 1,
       opdateret: new Date().toISOString(),

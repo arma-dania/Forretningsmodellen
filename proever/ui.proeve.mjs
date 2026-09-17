@@ -75,9 +75,16 @@ ok("ingen facit i kildekoden", !(await s.content()).includes("Den lave bruttomar
 
 console.log("\n=== Gruppen løser runde 1 ===");
 const svar = {A:"elektronik",B:"moebel",C:"saas",D:"konsulent",E:"supermarked"};
+const begrundelser = {
+  A:"Lav bruttomargin, kapitalen vender hurtigt, og kunderne betaler kontant.",
+  B:"Stort varelager og mange anlægsaktiver fra egen fabrik.",
+  C:"Bruttomarginen er næsten 90 procent, hvilket er meget højt.",
+  D:"Den her passer vist bedst til beskrivelsen af forretningen.",
+  E:"Vi gik efter mavefornemmelsen og synes, den ligner mest.",
+};
 for (const [id,m] of Object.entries(svar)){
   await s.selectOption(`#valg-${id}`, m);
-  await s.fill(`#grund-${id}`, `Begrundelse for profil ${id} med rigeligt over femogtyve tegn.`);
+  await s.fill(`#grund-${id}`, begrundelser[id]);
 }
 await s.waitForTimeout(1200);
 ok("gemmestatus viser gemt", (await s.locator("#gemstatus").textContent()).includes("Gemt"),
@@ -89,7 +96,7 @@ await s2.fill("#kode", koder["Bo Hansen"]);
 await s2.click("#knap");
 await s2.waitForSelector("#indhold:not([hidden])");
 ok("Bo ser gruppens fælles svar", (await s2.locator("#valg-A").inputValue())==="elektronik");
-ok("Bo ser gruppens begrundelse", (await s2.locator("#grund-B").inputValue()).includes("profil B"));
+ok("Bo ser gruppens begrundelse", (await s2.locator("#grund-B").inputValue()).includes("varelager"));
 
 await s.click("#tjek");
 await s.waitForTimeout(600);
@@ -136,12 +143,49 @@ ok("gruppe 1 står som afsluttet", overblikTekst.includes("afsluttet"));
 ok("resultat vist", overblikTekst.includes("første forsøg 3/5") && overblikTekst.includes("samlet 5/5"),
    (overblikTekst.match(/første forsøg \d\/\d, samlet \d\/\d/)||[""])[0]);
 ok("modelnavne ikke id'er", overblikTekst.includes("Online elektronikforhandler"));
-ok("begrundelser synlige", overblikTekst.includes("Begrundelse for profil A"));
+ok("begrundelser synlige", overblikTekst.includes("Lav bruttomargin"));
 ok("refleksion synlig", overblikTekst.includes("Anlægsgraden var mest afslørende"));
 const log = await u.locator("#log").textContent();
 ok("aktivitet pr. studerende", log.includes("Anne Jensen (Gruppe 1)") && log.includes("loggede ind"));
 ok("hint logget", log.includes("bad om hint"));
 ok("Bo registreret som aktiv", log.includes("Bo Hansen"));
+
+console.log("\n=== Resultater og benchmark ===");
+ok("stat-felter vist", (await u.locator("#stattavle .stat").count()) >= 3,
+   (await u.locator("#stattavle").textContent()).replace(/\s+/g," ").trim());
+const gs = u.locator("#gruppesoejler .soejle");
+ok("en soejle pr. gruppe", (await gs.count()) === 2, String(await gs.count()));
+ok("scoren staar som tal ved spidsen", /\d+ \/ 100/.test(await gs.first().textContent()),
+   (await gs.first().textContent()).replace(/\s+/g," ").trim());
+const bredde = await gs.first().locator(".fyld").evaluate(el => el.style.width);
+ok("soejlen har en bredde efter scoren", /^\d/.test(bredde), bredde);
+ok("gruppe uden afsluttet runde er maerket", (await u.locator("#gruppesoejler .soejle.ingen").count()) === 1);
+// Søjler med en score skal have samme farve – farven må ikke følge rangen.
+// Den neutrale "ikke afsluttet"-søjle er med vilje en anden.
+ok("scorede soejler har alle samme farve (ingen rangfarve)",
+   (await u.locator("#gruppesoejler .soejle:not(.ingen) .fyld")
+      .evaluateAll(els => new Set(els.map(e => getComputedStyle(e).backgroundColor)).size)) === 1);
+
+const ps = u.locator("#profilsoejler .soejle");
+ok("profilsoejler tegnet", (await ps.count()) === 5, String(await ps.count()));
+const profiltekst = await u.locator("#profilsoejler").textContent();
+ok("profilnavne staar paa soejlerne", profiltekst.includes("Online elektronikforhandler"));
+ok("hyppigste forveksling vist", profiltekst.includes("forvekslet med Konsulenthus"),
+   (profiltekst.match(/forvekslet med [^(]+/)||[""])[0].trim());
+
+const st = u.locator("#studerendetavle tbody tr");
+ok("studerende i tabellen", (await st.count()) === 3, String(await st.count()));
+ok("gruppens score staar paa den studerende", /\b62\b/.test(await st.first().textContent()));
+await u.locator("#studerendetavle th[data-sort=handlinger]").click();
+await u.waitForTimeout(200);
+ok("sortering virker", (await u.locator("#studerendetavle th[data-sort=handlinger]").getAttribute("aria-sort")) !== null);
+
+const overblikTekst2 = await u.locator("#overblik").textContent();
+ok("retning af begrundelser vist pr. profil", overblikTekst2.includes("peger på 3/3 afslørende nøgletal"),
+   (overblikTekst2.match(/peger på \d\/\d afslørende nøgletal/)||[""])[0]);
+ok("begrundelsens tekst vist", overblikTekst2.includes("Lav bruttomargin, kapitalen vender hurtigt"));
+ok("foerste/andet forsoeg markeret", overblikTekst2.includes("første forsøg") && overblikTekst2.includes("andet forsøg"));
+ok("gruppens score paa overskriften", overblikTekst2.includes("62/100"));
 
 console.log("\n=== Log ud ===");
 await s.click("#logud");
