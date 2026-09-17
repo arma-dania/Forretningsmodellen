@@ -210,3 +210,14 @@ h3.afsnit{font-family:var(--serif);font-size:1.3rem;margin:2rem 0 .3rem}
   .soejle .vaerdi{grid-area:vaerdi}
   .soejle .bane{grid-area:bane;margin-top:.15rem}
 }
+
+/* Claudes noter. Tydeligt adskilt fra tallene, saa de ikke laeses som en
+   bedoemmelse paa linje med scoren. */
+.vurdering{border-left:3px solid var(--rule);padding:.1rem 0 .1rem .9rem;margin:1rem 0}
+.vurdering h4{font-family:var(--serif);font-size:1.1rem;margin:0 0 .3rem}
+.vurdering .runde{font-size:.85rem;color:var(--muted);margin:.6rem 0 .1rem}
+.vurdering p{margin:.2rem 0 .6rem;font-size:.95rem;line-height:1.55}
+.opsamling{background:var(--tint);padding:1rem 1.1rem;margin:1rem 0}
+.opsamling h4{font-family:var(--serif);font-size:1.15rem;margin:0 0 .4rem}
+.opsamling p{margin:.3rem 0;font-size:.95rem;line-height:1.6}
+.udkast{font-size:.8rem;color:var(--muted);font-style:italic;margin-top:.8rem}

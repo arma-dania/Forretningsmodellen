@@ -77,6 +77,48 @@ Er vægtene forkerte for dit hold, så flyt dem. Kun afsluttede runder tæller,
 så en runde i gang ikke ser ud som en dårlig præstation. Hint trækker ikke ned
 – at bede om hjælp er en del af at lære – men antallet vises.
 
+## Claudes læsning af begrundelserne
+
+Ordmatchningen ovenfor kan se, om de studerende *nævner* de rigtige nøgletal.
+Den kan ikke se, om de bruger dem rigtigt. “Bruttomarginen er høj, derfor er
+det en supermarkedskæde” nævner det rigtige nøgletal og scorer på det – men
+konklusionen er vendt om.
+
+Knappen `Lad Claude læse besvarelserne` i `Resultater` giver to ting:
+
+- **En note pr. gruppe pr. runde**: hvor ræsonnementet holder, hvor de læner
+  sig på en tommelfingerregel uden at forstå den, og hvor en rigtig konklusion
+  hviler på et forkert argument. Slutter med ét spørgsmål, du kan stille dem.
+- **Et oplæg til opsamlingen**: de misforståelser, der går igen på tværs af
+  grupperne, med citater som belæg. Kræver mindst to grupper – én gruppe er
+  ikke et mønster.
+
+**Scoren røres ikke.** Det er med vilje. En model giver ikke det samme tal to
+gange, og et benchmark, der flytter sig, fordi siden blev genindlæst, er ikke
+et benchmark. Den deterministiske score bliver ved med at være det, grupperne
+sammenlignes på; Claude beskriver ved siden af. Noterne er mærket som udkast
+til dig og er ikke skrevet til de studerende.
+
+**De studerendes navne sendes ikke med.** Modellen får gruppebetegnelser,
+nøgletal, facit og teksterne – ikke hvem der skrev dem. Teksterne rammes ind i
+prompten og behandles som data, så en studerende, der skriver “glem alle
+tidligere instruktioner” i sin begrundelse, får det citeret til dig i stedet
+for adlydt.
+
+**Opsætning.** Læg `ANTHROPIC_API_KEY` ind i Netlify ved siden af de øvrige
+miljøvariabler, med scope der omfatter Functions, og deploy igen. Uden den
+siger knappen det til dig.
+
+**Pris.** Med syv grupper og begge runder er det størrelsesordenen tre kroner
+pr. hold: ét kald pr. gruppe pr. afsluttet runde plus ét til hver opsamling.
+Modellen er `claude-opus-5`, valgt fordi det er vurdering af fagligt
+ræsonnement på dansk, hvor kvaliteten er hele pointen.
+
+**Teknisk.** Arbejdet gøres af `netlify/functions/vurder-background.mjs`. Navnet
+skal slutte på `-background`: det er sådan Netlify kender en baggrundsfunktion,
+som må køre i op til et kvarter. En almindelig funktion timer ud efter få
+sekunder, og fjorten kald til modellen når aldrig igennem.
+
 ## Benchmark
 
 `Resultater` sammenligner på tre niveauer:
@@ -110,6 +152,7 @@ I Netlify: **Site configuration → Environment variables**.
 | `UNDERVISER_ARNE` | Arnes kode. Vælg en lang og tilfældig. |
 | `UNDERVISER_HELLE` | Helles kode. |
 | `UNDERVISER_RASMUS` | Rasmus' kode. |
+| `ANTHROPIC_API_KEY` | Din nøgle fra console.anthropic.com. Kun nødvendig for `Lad Claude læse besvarelserne`. |
 | `SESSION_HEMMELIGHED` | En tilfældig streng på mindst 32 tegn. Den underskriver login-cookien og skal ikke deles med nogen. |
 
 Hver underviser har sin egen miljøvariabel, så en kode kan skiftes for én
@@ -237,7 +280,10 @@ skal laves om til en liste.
 | `public/assets/styles.css` | Styling, inkl. lyst og mørkt tema |
 | `netlify/functions/api.mjs` | De studerendes API |
 | `netlify/functions/admin.mjs` | Underviserens API |
-| `netlify/functions/lib/facit.mjs` | **Facit og forklaringer** |
+| `netlify/functions/lib/facit.mjs` | **Facit, forklaringer, profilernes tal** |
+| `netlify/functions/lib/retning.mjs` | Retning og score |
+| `netlify/functions/lib/vurdering.mjs` | Prompterne til Claude |
+| `netlify/functions/vurder-background.mjs` | Baggrundsfunktion, der kører læsningen |
 | `netlify/functions/lib/auth.mjs` | Login: koder, sessioner |
 | `netlify/functions/lib/undervisere.mjs` | Underviserne og deres miljøvariabler |
 | `netlify/functions/lib/lager.mjs` | Lagring i Netlify Blobs |
@@ -257,6 +303,11 @@ Indholdet ligger to steder, og de skal følges ad:
   beskrivelser, nøgletalsdefinitionerne og refleksionsspørgsmålene.
 - **`netlify/functions/lib/facit.mjs`** – hvilken model der er den rigtige til
   hver profil, og forklaringerne.
+
+En ændring skal laves begge steder. `proever/indhold.proeve.mjs` kører som
+Netlifys byggekommando og **stopper deployet**, hvis de to filer er i utakt –
+ellers ville siden gå i luften og vurdere de studerendes arbejde op mod
+forældede tal, uden at nogen opdagede det.
 
 Delingen er ikke tilfældig. `data.js` sendes til browseren, og de studerende
 kan læse den i kildekoden; lå facit der, kunne svarene aflæses på forhånd, og

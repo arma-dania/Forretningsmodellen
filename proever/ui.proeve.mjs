@@ -37,14 +37,14 @@ await u.waitForTimeout(400);
 ok("holdkort vises", (await u.locator(".holdkort").count()) >= 1, await u.locator(".holdkort strong").first().textContent());
 
 await u.click("#visOpret");
-await u.fill("#liste","Gruppe 1\nAnne Jensen\nBo Hansen\n\nGruppe 2\nCecilie Dam");
+await u.fill("#liste","Gruppe 1\nAnne Jensen\nBo Hansen\n\nGruppe 2\nCecilie Dam\n\nGruppe 3\nDorte Eg");
 await u.click("#opretStuderende");
 await u.waitForTimeout(500);
-ok("oprettelse melder tilbage", (await u.locator("#opretstatus").textContent()).includes("3 oprettet"),
+ok("oprettelse melder tilbage", (await u.locator("#opretstatus").textContent()).includes("4 oprettet"),
    await u.locator("#opretstatus").textContent());
 const kodetekst = await u.locator("#nyekoderliste").textContent();
 const koder = Object.fromEntries(kodetekst.trim().split("\n").map(l=>{const d=l.split("\t");return [d[1], d[2]];}));
-ok("koder vist til udlevering", Object.keys(koder).length===3, JSON.stringify(koder));
+ok("koder vist til udlevering", Object.keys(koder).length===4, JSON.stringify(koder));
 
 await u.click("#visKoder");
 await u.waitForTimeout(200);
@@ -125,6 +125,26 @@ await s.fill("#refl-0","Anlægsgraden var mest afslørende.");
 await s.waitForTimeout(1100);
 ok("refleksion gemt", (await s.locator("#gemstatus").textContent()).includes("Gemt"));
 
+console.log("\n=== Gruppe 2 loeser ogsaa runden ===");
+// Opsamlingen paa tvaers kraever mere end en gruppe. Gruppe 3 roerer intet,
+// saa baade "afsluttet" og "ikke afsluttet" bliver tegnet.
+const s3 = await nySide();
+await s3.goto(B+"/login.html");
+await s3.fill("#kode", koder["Cecilie Dam"]);
+await s3.click("#knap");
+await s3.waitForSelector("#indhold:not([hidden])");
+for (const [id,m] of Object.entries(svar)){
+  await s3.selectOption(`#valg-${id}`, m);
+  await s3.fill(`#grund-${id}`, begrundelser[id]);
+}
+await s3.waitForTimeout(1100);
+await s3.click("#tjek"); await s3.waitForTimeout(600);
+await s3.selectOption("#valg-D","supermarked");
+await s3.selectOption("#valg-E","konsulent");
+await s3.waitForTimeout(1100);
+await s3.click("#tjek"); await s3.waitForTimeout(700);
+ok("Gruppe 2 er ogsaa faerdig", (await s3.locator("#status").textContent()).includes("Første forsøg: 3 af 5"));
+
 console.log("\n=== Runde 2 ===");
 await s.click("[data-runde='1']");
 await s.waitForTimeout(700);
@@ -154,7 +174,7 @@ console.log("\n=== Resultater og benchmark ===");
 ok("stat-felter vist", (await u.locator("#stattavle .stat").count()) >= 3,
    (await u.locator("#stattavle").textContent()).replace(/\s+/g," ").trim());
 const gs = u.locator("#gruppesoejler .soejle");
-ok("en soejle pr. gruppe", (await gs.count()) === 2, String(await gs.count()));
+ok("en soejle pr. gruppe", (await gs.count()) === 3, String(await gs.count()));
 ok("scoren staar som tal ved spidsen", /\d+ \/ 100/.test(await gs.first().textContent()),
    (await gs.first().textContent()).replace(/\s+/g," ").trim());
 const bredde = await gs.first().locator(".fyld").evaluate(el => el.style.width);
@@ -174,7 +194,7 @@ ok("hyppigste forveksling vist", profiltekst.includes("forvekslet med Konsulenth
    (profiltekst.match(/forvekslet med [^(]+/)||[""])[0].trim());
 
 const st = u.locator("#studerendetavle tbody tr");
-ok("studerende i tabellen", (await st.count()) === 3, String(await st.count()));
+ok("studerende i tabellen", (await st.count()) === 4, String(await st.count()));
 ok("gruppens score staar paa den studerende", /\b62\b/.test(await st.first().textContent()));
 await u.locator("#studerendetavle th[data-sort=handlinger]").click();
 await u.waitForTimeout(200);
@@ -186,6 +206,23 @@ ok("retning af begrundelser vist pr. profil", overblikTekst2.includes("peger på
 ok("begrundelsens tekst vist", overblikTekst2.includes("Lav bruttomargin, kapitalen vender hurtigt"));
 ok("foerste/andet forsoeg markeret", overblikTekst2.includes("første forsøg") && overblikTekst2.includes("andet forsøg"));
 ok("gruppens score paa overskriften", overblikTekst2.includes("62/100"));
+
+console.log("\n=== Claudes laesning af besvarelserne ===");
+ok("knappen findes", await u.locator("#vurder").isVisible());
+ok("det staar at scoren er uberoert", (await u.locator("#resultatsub, .sub").allTextContents())
+   .some(t => t.includes("Scoren ovenfor er uberørt") || t.includes("Scoren ovenfor er uberørt")));
+ok("det staar at navne ikke sendes med", (await u.locator(".sub").allTextContents())
+   .some(t => t.includes("navne sendes ikke med")));
+await u.click("#vurder");
+await u.waitForFunction(() => document.querySelector("#vurderstatus")?.textContent.includes("Læst"), null, {timeout: 20000});
+ok("status melder faerdig med model", (await u.locator("#vurderstatus").textContent()).includes("claude-opus-5"),
+   (await u.locator("#vurderstatus").textContent()).trim());
+const vt = await u.locator("#vurdering").textContent();
+ok("opsamling paa tvaers vist", vt.includes("Til opsamlingen") && vt.includes("To misforståelser går igen"));
+ok("opsamlingen siger hvor mange grupper den bygger paa", vt.includes("På tværs af 2 grupper"));
+ok("note pr. gruppe vist", vt.includes("Gruppe 1") && vt.includes("vender konklusionen om"));
+ok("noten er maerket som udkast", vt.includes("Udkast til dig, ikke til de studerende"));
+ok("knappen inviterer til at koere igen", (await u.locator("#vurder").textContent()).includes("igen"));
 
 console.log("\n=== Log ud ===");
 await s.click("#logud");

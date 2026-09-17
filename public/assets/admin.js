@@ -198,6 +198,7 @@ async function hentOverblik() {
   try {
     overblik = await kald(`/admin-api/hold/${valgtHold}/oversigt`);
     tegnResultater();
+    tegnVurdering(await kald(`/admin-api/hold/${valgtHold}/vurdering`).catch(() => null));
     tegnOverblik();
     tegnLog();
     if (!$("kodepanel").hidden) tegnKoder();
@@ -414,6 +415,80 @@ $("overblik").addEventListener("click", async e => {
     alert(fejl.message);
   }
 });
+
+/* ---------- Claudes laesning ---------- */
+// Arbejdet gøres af en baggrundsfunktion, fordi fjorten kald til modellen
+// ikke når igennem en almindelig funktions timeout. Derfor sættes den i gang
+// og status hentes indtil den er færdig.
+let vurderTimer = null;
+
+$("vurder").addEventListener("click", async () => {
+  if (!valgtHold) return;
+  $("vurder").disabled = true;
+  melding("vurderstatus", "Claude læser besvarelserne … det tager typisk et halvt til et helt minut.");
+  try {
+    const svar = await fetch("/.netlify/functions/vurder-background", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ holdId: valgtHold }),
+    });
+    if (svar.status === 401) { visLogin(); return; }
+    if (svar.status === 404) throw new Error("Holdet findes ikke.");
+    if (!svar.ok && svar.status !== 202) throw new Error(`Serveren svarede ${svar.status}.`);
+    foelgVurdering();
+  } catch (fejl) {
+    melding("vurderstatus", fejl.message, "bad");
+    $("vurder").disabled = false;
+  }
+});
+
+function foelgVurdering() {
+  clearTimeout(vurderTimer);
+  vurderTimer = setTimeout(async () => {
+    try {
+      const v = await kald(`/admin-api/hold/${valgtHold}/vurdering`);
+      tegnVurdering(v);
+      if (v.status === "i gang") foelgVurdering();
+    } catch (fejl) {
+      melding("vurderstatus", fejl.message, "bad");
+      $("vurder").disabled = false;
+    }
+  }, 3000);
+}
+
+// Modellens svar er tekst og skal renses, før det sættes ind. Afsnit skilles
+// ved blanke linjer.
+const afsnit = t => String(t ?? "").split(/\n\s*\n/).filter(Boolean).map(a => `<p>${esc(a.trim())}</p>`).join("");
+
+function tegnVurdering(v) {
+  if (!v || v.status === "ingen") { $("vurdering").innerHTML = ""; return; }
+
+  if (v.status === "i gang") {
+    melding("vurderstatus", "Claude læser besvarelserne … det tager typisk et halvt til et helt minut.");
+    $("vurder").disabled = true;
+    return;
+  }
+  $("vurder").disabled = false;
+  if (v.status === "fejl") { melding("vurderstatus", v.fejl || "Det gik galt.", "bad"); return; }
+
+  melding("vurderstatus", `Læst ${dato(v.afsluttet)} af ${v.model}.`, "good");
+  $("vurder").textContent = "Læs besvarelserne igen";
+
+  const opsamlinger = (v.opsamlinger ?? [])
+    .map(o => `<div class="opsamling"><h4>Til opsamlingen – runde ${o.runde + 1}</h4>
+      ${afsnit(o.tekst)}
+      <p class="udkast">På tværs af ${o.antalGrupper} grupper. Udkast til dig, ikke til de studerende.</p></div>`)
+    .join("");
+
+  const grupper = (v.grupper ?? [])
+    .map(g => `<div class="vurdering"><h4>${esc(g.navn)}</h4>${g.runder
+      .map(r => `<p class="runde">Runde ${r.runde + 1}</p>${afsnit(r.note)}`)
+      .join("")}</div>`)
+    .join("");
+
+  $("vurdering").innerHTML = opsamlinger + grupper;
+}
 
 /* ---------- Aktivitet ---------- */
 const HAENDELSESTEKST = {

@@ -1,5 +1,9 @@
 [build]
   publish = "public"
+  # Stopper deployet, hvis øvelsens indhold er i utakt mellem
+  # public/assets/data.js og netlify/functions/lib/facit.mjs. Uden den ville
+  # siden gå i luften og vurdere de studerendes arbejde op mod forældede tal.
+  command = "node proever/indhold.proeve.mjs"
   functions = "netlify/functions"
 
 [build.environment]

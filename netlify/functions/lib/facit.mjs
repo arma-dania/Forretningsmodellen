@@ -1,11 +1,44 @@
-// Facit og forklaringer. Ligger bevidst på serveren og ikke i
-// assets/data.js: de studerende kan ellers læse svarene i browserens
-// kildekode, og så er de resultater, underviseren følger, intet værd.
-// Klienten får kun at vide, hvad der er rigtigt, når den har svaret.
+// Øvelsens indhold, som serveren skal kende: facit, forklaringer,
+// profilernes nøgletal og modellernes beskrivelser.
+//
+// Filen ligger i netlify/ og ikke i public/, fordi den indeholder svarene.
+// Alt her ud over 'model', 'forklaring' og 'forveksling' findes også i
+// public/assets/data.js, som browseren henter. De to skal stemme overens,
+// og proever/indhold.proeve.mjs fejler, hvis de ikke gør – den kører som
+// Netlifys byggekommando, så et deploy stopper frem for at vurdere de
+// studerendes arbejde op mod forældede tal.
 
 export const FACIT = [
   {
     "runde": 0,
+    "navn": "Runde 1",
+    "modeller": [
+      {
+        "id": "konsulent",
+        "navn": "Konsulenthus",
+        "tekst": "Rådgiver virksomheder og fakturerer medarbejdernes timer."
+      },
+      {
+        "id": "moebel",
+        "navn": "Møbelproducent med egen fabrik",
+        "tekst": "Producerer møbler selv og sælger dem gennem møbelforhandlere."
+      },
+      {
+        "id": "elektronik",
+        "navn": "Online elektronikforhandler",
+        "tekst": "Sælger kendte mærkevarer til private via webshop."
+      },
+      {
+        "id": "saas",
+        "navn": "Softwarevirksomhed (SaaS)",
+        "tekst": "Udvikler software og sælger det som abonnement til virksomheder."
+      },
+      {
+        "id": "supermarked",
+        "navn": "Supermarkedskæde",
+        "tekst": "Driver dagligvarebutikker i egne og lejede lokaler."
+      }
+    ],
     "profiler": {
       "A": {
         "model": "elektronik",
@@ -15,7 +48,16 @@ export const FACIT = [
           "bm",
           "aoh",
           "deb"
-        ]
+        ],
+        "v": {
+          "bm": 17,
+          "og": 2.8,
+          "aoh": 3.4,
+          "al": 6,
+          "lager": 9,
+          "deb": 90,
+          "sol": 28
+        }
       },
       "B": {
         "model": "moebel",
@@ -25,7 +67,16 @@ export const FACIT = [
           "aoh",
           "al",
           "lager"
-        ]
+        ],
+        "v": {
+          "bm": 48,
+          "og": 7,
+          "aoh": 0.85,
+          "al": 52,
+          "lager": 2.4,
+          "deb": 7.3,
+          "sol": 48
+        }
       },
       "C": {
         "model": "saas",
@@ -35,7 +86,16 @@ export const FACIT = [
           "bm",
           "al",
           "lager"
-        ]
+        ],
+        "v": {
+          "bm": 88,
+          "og": 18,
+          "aoh": 0.7,
+          "al": 60,
+          "lager": null,
+          "deb": 20,
+          "sol": 55
+        }
       },
       "D": {
         "model": "supermarked",
@@ -45,7 +105,16 @@ export const FACIT = [
           "bm",
           "lager",
           "al"
-        ]
+        ],
+        "v": {
+          "bm": 22,
+          "og": 3.5,
+          "aoh": 2.6,
+          "al": 55,
+          "lager": 16,
+          "deb": 180,
+          "sol": 38
+        }
       },
       "E": {
         "model": "konsulent",
@@ -55,12 +124,49 @@ export const FACIT = [
           "dg",
           "al",
           "deb"
-        ]
+        ],
+        "v": {
+          "bm": 85,
+          "og": 11,
+          "aoh": 1.9,
+          "al": 8,
+          "lager": null,
+          "deb": 6.5,
+          "sol": 45
+        }
       }
     }
   },
   {
     "runde": 1,
+    "navn": "Runde 2",
+    "modeller": [
+      {
+        "id": "discount",
+        "navn": "Discountkæde",
+        "tekst": "Dagligvarer med snævert sortiment og lave priser i egne butikker."
+      },
+      {
+        "id": "grossist",
+        "navn": "Grossist",
+        "tekst": "Køber stort ind og sælger videre til butikker, restauranter og håndværkere."
+      },
+      {
+        "id": "maaltid",
+        "navn": "Måltidskasse-abonnement",
+        "tekst": "Pakker og leverer måltidskasser til private fra egen pakkecentral."
+      },
+      {
+        "id": "brand",
+        "navn": "Modebrand via forhandlere",
+        "tekst": "Designer tøj, får det produceret hos underleverandører og sælger via forhandlere."
+      },
+      {
+        "id": "specialbutik",
+        "navn": "Specialbutikskæde i mode",
+        "tekst": "Sælger tøj fra flere mærker i egne butikker i bymidterne."
+      }
+    ],
     "profiler": {
       "A": {
         "model": "brand",
@@ -70,7 +176,16 @@ export const FACIT = [
           "al",
           "lager",
           "deb"
-        ]
+        ],
+        "v": {
+          "bm": 45,
+          "og": 9,
+          "aoh": 1.7,
+          "al": 10,
+          "lager": 3,
+          "deb": 5.5,
+          "sol": 45
+        }
       },
       "B": {
         "model": "maaltid",
@@ -80,7 +195,16 @@ export const FACIT = [
           "lager",
           "deb",
           "sm"
-        ]
+        ],
+        "v": {
+          "bm": 35,
+          "og": 2,
+          "aoh": 3,
+          "al": 35,
+          "lager": 40,
+          "deb": 200,
+          "sol": 22
+        }
       },
       "C": {
         "model": "grossist",
@@ -90,7 +214,16 @@ export const FACIT = [
           "bm",
           "deb",
           "al"
-        ]
+        ],
+        "v": {
+          "bm": 18,
+          "og": 3,
+          "aoh": 2.4,
+          "al": 12,
+          "lager": 6.5,
+          "deb": 8,
+          "sol": 32
+        }
       },
       "D": {
         "model": "specialbutik",
@@ -100,7 +233,16 @@ export const FACIT = [
           "dg",
           "sm",
           "deb"
-        ]
+        ],
+        "v": {
+          "bm": 55,
+          "og": 6,
+          "aoh": 1.6,
+          "al": 30,
+          "lager": 2.2,
+          "deb": 150,
+          "sol": 40
+        }
       },
       "E": {
         "model": "discount",
@@ -110,16 +252,81 @@ export const FACIT = [
           "bm",
           "lager",
           "al"
-        ]
+        ],
+        "v": {
+          "bm": 20,
+          "og": 3,
+          "aoh": 2.8,
+          "al": 50,
+          "lager": 18,
+          "deb": 200,
+          "sol": 35
+        }
       }
     }
   }
 ];
 
+export const NOEGLETAL = [
+  {
+    "key": "bm",
+    "navn": "Bruttomargin",
+    "def": "Bruttoresultat · 100 / Omsætning"
+  },
+  {
+    "key": "og",
+    "navn": "Overskudsgrad",
+    "def": "Resultat af primær drift · 100 / Omsætning"
+  },
+  {
+    "key": "aoh",
+    "navn": "Aktivernes omsætningshastighed",
+    "def": "Omsætning / Gennemsnitlig balancesum"
+  },
+  {
+    "key": "ag",
+    "navn": "Afkastningsgrad",
+    "def": "Resultat af primær drift · 100 / Gennemsnitlig balancesum (= overskudsgrad × aktivernes omsætningshastighed)"
+  },
+  {
+    "key": "dg",
+    "navn": "Driftsmæssig gearing",
+    "def": "Kapacitetsomkostninger · 100 / Samlede driftsomkostninger"
+  },
+  {
+    "key": "sm",
+    "navn": "Sikkerhedsmargin",
+    "def": "(Faktisk omsætning − Nulpunktsomsætning) · 100 / Faktisk omsætning"
+  },
+  {
+    "key": "al",
+    "navn": "Anlægsgrad",
+    "def": "Anlægsaktiver ultimo · 100 / Samlede aktiver ultimo"
+  },
+  {
+    "key": "lager",
+    "navn": "Varelagerets omsætningshastighed",
+    "def": "Vareforbrug / Varelager ultimo"
+  },
+  {
+    "key": "deb",
+    "navn": "Varedebitorernes omsætningshastighed",
+    "def": "Omsætning / Varedebitorer ultimo"
+  },
+  {
+    "key": "sol",
+    "navn": "Soliditetsgrad",
+    "def": "Egenkapital ultimo · 100 / Aktiver i alt ultimo"
+  }
+];
+
 export const antalRunder = () => FACIT.length;
 export const profilIder = runde => Object.keys(FACIT[runde].profiler);
+export const profil = (runde, profilId) => FACIT[runde]?.profiler[profilId] ?? null;
+export const modellerne = runde => FACIT[runde]?.modeller ?? [];
 export const sporFor = (runde, profilId) => FACIT[runde]?.profiler[profilId]?.spor ?? [];
 export const rigtigModel = (runde, profilId) => FACIT[runde]?.profiler[profilId]?.model ?? null;
+export const noegletalsnavn = key => NOEGLETAL.find(n => n.key === key)?.navn ?? key;
 
 // Retter et sæt valg. Returnerer kun rigtigt/forkert, medmindre facit må vises.
 export function ret(runde, valg, visFacit) {

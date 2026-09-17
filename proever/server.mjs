@@ -17,6 +17,8 @@ registerHooks({
   resolve(spec, ctx, next) {
     if (spec === "@netlify/blobs")
       return { url: pathToFileURL(path.join(ROD, "proever/blobs-attrap.mjs")).href, shortCircuit: true };
+    if (spec === "@anthropic-ai/sdk")
+      return { url: pathToFileURL(path.join(ROD, "proever/anthropic-attrap.mjs")).href, shortCircuit: true };
     return next(spec, ctx);
   },
 });
@@ -25,12 +27,14 @@ process.env.SESSION_HEMMELIGHED ??= "proevehemmelighed";
 // Koderne hedder "kun-lokal-proeve-", fordi de står i et offentligt repo.
 // Sættes en af dem som rigtig kode i Netlify, kan enhver læse den på GitHub
 // – navnet skal gøre det åbenlyst, at de ikke er til det.
+process.env.ANTHROPIC_API_KEY ??= "kun-lokal-proeve-noegle";
 process.env.UNDERVISER_ARNE ??= "kun-lokal-proeve-arne";
 process.env.UNDERVISER_HELLE ??= "kun-lokal-proeve-helle";
 process.env.UNDERVISER_RASMUS ??= "kun-lokal-proeve-rasmus";
 
 const api = (await import(path.join(ROD, "netlify/functions/api.mjs"))).default;
 const admin = (await import(path.join(ROD, "netlify/functions/admin.mjs"))).default;
+const vurder = (await import(path.join(ROD, "netlify/functions/vurder-background.mjs"))).default;
 
 const TYPER = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json" };
 
@@ -38,7 +42,8 @@ export function start(port = 8787) {
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
 
-    if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin-api/")) {
+    if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin-api/") ||
+        url.pathname.startsWith("/.netlify/functions/")) {
       const bidder = [];
       for await (const b of req) bidder.push(b);
       const forespoergsel = new Request("http://localhost" + req.url, {
@@ -46,7 +51,9 @@ export function start(port = 8787) {
         headers: { ...req.headers, "x-nf-client-connection-ip": "1.2.3.4" },
         body: bidder.length ? Buffer.concat(bidder) : undefined,
       });
-      const svar = await (url.pathname.startsWith("/admin-api/") ? admin : api)(forespoergsel, {});
+      const handler = url.pathname.startsWith("/.netlify/functions/") ? vurder
+        : url.pathname.startsWith("/admin-api/") ? admin : api;
+      const svar = await handler(forespoergsel, {});
       res.writeHead(svar.status, Object.fromEntries(svar.headers));
       res.end(Buffer.from(await svar.arrayBuffer()));
       return;

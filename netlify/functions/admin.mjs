@@ -304,6 +304,13 @@ const eksport = (req, ctx) =>
     });
   });
 
+// Claudes læsning af besvarelserne. Selve arbejdet gøres af
+// vurder-background.mjs; her hentes kun resultatet og status undervejs.
+const vurdering = (req, ctx) =>
+  medHold(req, ctx, async hold =>
+    json((await lager.laes(`vurdering/${hold.id}`)) ?? { status: "ingen" })
+  );
+
 const mig = req =>
   medUnderviser(req, async session => json({ underviser: session.underviser, navn: session.navn }));
 const logud = () => json({ ok: true }, 200, { "set-cookie": auth.ryddCookie() });
@@ -318,6 +325,7 @@ export default ruter({
   "POST /admin-api/hold/:id/studerende": opretStuderende,
   "GET /admin-api/hold/:id/oversigt": oversigt,
   "GET /admin-api/hold/:id/eksport": eksport,
+  "GET /admin-api/hold/:id/vurdering": vurdering,
   "POST /admin-api/studerende/:holdId/:id/nykode": nyKode,
   "DELETE /admin-api/studerende/:holdId/:id": sletStuderende,
 });
