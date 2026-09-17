@@ -348,8 +348,8 @@ $("facit").addEventListener("click", () => {
 
 /* ---------- Hvem er logget ind ---------- */
 function tegnBruger(){
-  $("brugernavn").textContent = bruger.navn || bruger.studienummer || "Logget ind";
-  const kammerater = bruger.gruppekammerater.filter(k => !k.erMig).map(k => k.navn || k.studienummer);
+  $("brugernavn").textContent = bruger.navn || "Logget ind";
+  const kammerater = bruger.gruppekammerater.filter(k => !k.erMig).map(k => k.navn);
   $("brugerhold").textContent = [bruger.hold, bruger.gruppe].filter(Boolean).join(" · ");
   $("gruppemedlemmer").textContent = kammerater.length
     ? `Sammen med ${kammerater.join(", ")}. I deler én besvarelse.`

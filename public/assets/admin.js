@@ -30,7 +30,7 @@ let valgtHold = null;
 let overblik = null;
 
 const dato = t => (t ? new Date(t).toLocaleString("da-DK", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "–");
-const navnPaa = s => s.navn || s.studienummer || "(uden navn)";
+const navnPaa = s => s.navn || "(uden navn)";
 
 function melding(el, tekst, slags) {
   const e = $(el);
@@ -154,7 +154,7 @@ $("opretStuderende").addEventListener("click", async () => {
     if (r.oprettede.length) {
       $("nyekoder").hidden = false;
       $("nyekoderliste").textContent = r.oprettede
-        .map(s => `${s.gruppe}\t${s.studienummer || ""}\t${s.navn || ""}\t${s.kode}`)
+        .map(s => `${s.gruppe}\t${s.navn || ""}\t${s.kode}`)
         .join("\n");
     }
     await hentOverblik();
@@ -175,7 +175,7 @@ function tegnKoder() {
   const linjer = [];
   for (const g of overblik.grupper) {
     linjer.push(g.navn);
-    for (const m of g.medlemmer) linjer.push(`   ${(m.studienummer || "").padEnd(10)} ${navnPaa(m).padEnd(28)} ${m.kode}`);
+    for (const m of g.medlemmer) linjer.push(`   ${navnPaa(m).padEnd(30)} ${m.kode}`);
     linjer.push("");
   }
   $("kodeliste").textContent = linjer.join("\n") || "Ingen studerende endnu.";
@@ -224,13 +224,12 @@ function tegnOverblik() {
   $("overblik").innerHTML = overblik.grupper
     .map(g => {
       const medlemmer = `<div class="tabelwrap"><table class="admin"><thead><tr>
-          <th class="navn l" scope="col">Studerende</th><th class="l" scope="col">Studienr.</th>
+          <th class="navn l" scope="col">Studerende</th>
           <th class="l" scope="col">Kode</th><th scope="col">Logins</th>
           <th scope="col">Handlinger</th><th class="l" scope="col">Senest aktiv</th><th></th>
         </tr></thead><tbody>${g.medlemmer
           .map(
             m => `<tr><th class="navn l" scope="row">${esc(navnPaa(m))}</th>
-              <td class="l">${esc(m.studienummer)}</td>
               <td class="kode">${esc(m.kode)}</td>
               <td>${m.logins}</td><td>${m.handlinger}</td>
               <td class="l">${m.sidst ? dato(m.sidst) : "<span class='maerke ingen'>aldrig</span>"}</td>

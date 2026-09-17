@@ -17,7 +17,8 @@ enkelte og gruppernes resultater.
 ## Sådan kører øvelsen i klassen
 
 **Før timen.** Log ind på `/admin.html` med underviserkoden. Opret et hold, og
-indsæt listen over studerende. Du får en kode pr. studerende, som du udleverer
+indsæt listen over studerende – ét navn pr. linje, eventuelt efterfulgt af
+gruppe, eller med `Gruppe 2` som overskrift over dem, der hører sammen. Du får en kode pr. studerende, som du udleverer
 – fx gennem Moodle eller på print (siden kan udskrives, og kun kodelisten
 kommer med).
 
@@ -75,16 +76,19 @@ tændes under **Site configuration → Blobs**.
 
 ## Behandling af personoplysninger
 
-Øvelsen gemmer studerendes navne, studienumre, deres besvarelser og hvornår de
-har været aktive. Det er personoplysninger, og akademiet – ikke den enkelte
+Øvelsen gemmer de studerendes navne, deres besvarelser og hvornår de har
+været aktive. Det er personoplysninger, og akademiet – ikke den enkelte
 underviser – er dataansvarlig. Inden systemet bruges på rigtige hold, bør det
 afklares med jeres IT eller DPO, om en selvbygget løsning på en privat
 Netlify-konto må bruges, eller om der skal en databehandleraftale til.
 
 Tre ting, der begrænser omfanget:
 
-- **Brug studienumre frem for fulde navne.** Listen kan oprettes med numre
-  alene; øvelsen fungerer uændret.
+- **Der gemmes ingen studienumre.** Systemet kender kun et navn og en gruppe.
+  Står der et nummer forrest på en linje i listen, bliver det kasseret ved
+  oprettelsen, så en gammel liste ikke kan trække numre med ind. Navnet
+  behøver ikke være det fulde: fornavn og forbogstav er nok til, at gruppen
+  kan se, hvem der er hvem, og til at du kan følge aktiviteten.
 - **Slet holdet, når semestret er slut.** Knappen `Slet holdet og alle data`
   fjerner studerende, grupper, besvarelser og aktivitetslog i ét greb og
   kræver, at du skriver holdets navn.
@@ -198,7 +202,7 @@ spørger kun "hvem er den her bruger?" gennem to steder:
 
 Skal øvelsen senere ligge i Moodle som LTI-værktøj, er det de to filer, der
 skiftes ud. Datamodellen kender ikke adgangskoder: en studerende er et id, et
-studienummer og en gruppe, og det gælder også, når brugeren kommer fra Moodle.
+navn og en gruppe, og det gælder også, når brugeren kommer fra Moodle.
 
 ## Baggrund
 

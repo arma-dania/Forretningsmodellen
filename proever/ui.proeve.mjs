@@ -35,18 +35,21 @@ await u.waitForTimeout(400);
 ok("holdkort vises", (await u.locator(".holdkort").count()) >= 1, await u.locator(".holdkort strong").first().textContent());
 
 await u.click("#visOpret");
-await u.fill("#liste","Gruppe 1\n201234\tAnne Jensen\n201235\tBo Hansen\n\nGruppe 2\n201236\tCecilie Dam");
+await u.fill("#liste","Gruppe 1\nAnne Jensen\nBo Hansen\n\nGruppe 2\nCecilie Dam");
 await u.click("#opretStuderende");
 await u.waitForTimeout(500);
 ok("oprettelse melder tilbage", (await u.locator("#opretstatus").textContent()).includes("3 oprettet"),
    await u.locator("#opretstatus").textContent());
 const kodetekst = await u.locator("#nyekoderliste").textContent();
-const koder = Object.fromEntries(kodetekst.trim().split("\n").map(l=>{const d=l.split("\t");return [d[2], d[3]];}));
+const koder = Object.fromEntries(kodetekst.trim().split("\n").map(l=>{const d=l.split("\t");return [d[1], d[2]];}));
 ok("koder vist til udlevering", Object.keys(koder).length===3, JSON.stringify(koder));
 
 await u.click("#visKoder");
 await u.waitForTimeout(200);
-ok("kodeliste kan udskrives", (await u.locator("#kodeliste").textContent()).includes("Gruppe 1"));
+const kl = await u.locator("#kodeliste").textContent();
+ok("kodeliste kan udskrives", kl.includes("Gruppe 1") && kl.includes("Anne Jensen"));
+ok("ingen studienumre i overblikket", !(await u.locator("#overblik").textContent()).match(/\b20\d{4}\b/));
+ok("ingen Studienr.-kolonne", (await u.locator("th:text-is('Studienr.')").count())===0);
 
 console.log("\n=== Studerende logger ind ===");
 const s = await nySide();

@@ -59,8 +59,8 @@
   <!-- Opret studerende -->
   <section class="panel" id="opretpanel" hidden>
     <h2>Opret studerende</h2>
-    <p class="sub">Indsæt én studerende pr. linje. Felterne må skilles med tabulator, semikolon eller komma, så et klip fra Excel virker direkte. Rækkefølgen er studienummer, navn, gruppe. Skriver du i stedet en linje som <code>Gruppe 3</code>, hører alle de følgende linjer til den gruppe, indtil næste overskrift.</p>
-    <textarea id="liste" spellcheck="false" placeholder="Gruppe 1&#10;201234&#9;Anne Jensen&#10;201235&#9;Bo Hansen&#10;&#10;Gruppe 2&#10;201236&#9;Cecilie Dam"></textarea>
+    <p class="sub">Indsæt én studerende pr. linje: navn, eventuelt efterfulgt af gruppe. Felterne må skilles med tabulator, semikolon eller komma, så et klip fra Excel virker direkte. Skriver du i stedet en linje som <code>Gruppe 3</code>, hører alle de følgende linjer til den gruppe, indtil næste overskrift. Systemet gemmer ikke studienumre – står der et nummer forrest på en linje, bliver det kasseret.</p>
+    <textarea id="liste" spellcheck="false" placeholder="Gruppe 1&#10;Anne Jensen&#10;Bo Hansen&#10;&#10;Gruppe 2&#10;Cecilie Dam"></textarea>
     <div class="raekke">
       <button type="button" class="primaer" id="opretStuderende">Opret</button>
       <p class="status" id="opretstatus" aria-live="polite"></p>

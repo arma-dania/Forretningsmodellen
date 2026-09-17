@@ -22,7 +22,7 @@ ok("hold kræver navn", (await a("POST","/admin-api/hold",{navn:"  "})).status =
 const { data:{hold} } = await a("POST","/admin-api/hold",{navn:"MØK 2026 forår"});
 ok("hold oprettet", !!hold.id, hold.navn);
 
-const liste = "Gruppe 1\n201234\tAnne Jensen\n201235\tBo Hansen\n\nGruppe 2\n201236\tCecilie Dam\n201237\tDavid Eg";
+const liste = "Gruppe 1\nAnne Jensen\nBo Hansen\n\nGruppe 2\nCecilie Dam\nDavid Eg";
 const { data:opret } = await a("POST",`/admin-api/hold/${hold.id}/studerende`,{liste});
 ok("fire studerende oprettet", opret.oprettede.length === 4, opret.oprettede.map(s=>s.gruppe+"/"+s.navn).join(", "));
 ok("to grupper dannet", new Set(opret.oprettede.map(s=>s.gruppe)).size === 2);
@@ -30,6 +30,17 @@ ok("koder har laesbart format", opret.oprettede.every(s=>/^[a-z2-9]{4}-[a-z2-9]{
 ok("alle koder forskellige", new Set(opret.oprettede.map(s=>s.kode)).size === 4);
 const { data:igen } = await a("POST",`/admin-api/hold/${hold.id}/studerende`,{liste});
 ok("dubletter springes over", igen.oprettede.length === 0 && igen.sprunget.length === 4);
+
+// Systemet skal ikke kende studienumre. Indsætter underviseren en gammel
+// liste, hvor nummeret står forrest, skal nummeret kasseres – ikke havne
+// som navn og ikke følge med i eksporten.
+const { data:gammel } = await a("POST",`/admin-api/hold/${hold.id}/studerende`,
+  {liste:"Gruppe 3\n201240\tErik Foss\n201241;Frida G\u00e5rd\n201242"});
+ok("numre i en gammel liste kasseres", gammel.oprettede.length===2 &&
+   gammel.oprettede.every(s=>!/\d/.test(s.navn)), gammel.oprettede.map(s=>s.navn).join(", "));
+ok("en linje med kun et nummer bliver ikke til en studerende",
+   !gammel.oprettede.some(s=>/^\d+$/.test(s.navn)), gammel.oprettede.map(s=>`"${s.navn}"`).join(", "));
+ok("intet studienummer gemmes", gammel.oprettede.every(s=>s.studienummer===undefined));
 
 const anne = opret.oprettede.find(s=>s.navn==="Anne Jensen");
 const bo   = opret.oprettede.find(s=>s.navn==="Bo Hansen");
@@ -44,6 +55,8 @@ await s3("POST","/api/login",{kode:cecilie.kode});
 const { data:mig } = await s1("GET","/api/mig");
 ok("mig viser hold og gruppe", mig.hold==="MØK 2026 forår" && mig.gruppe==="Gruppe 1", `${mig.hold} / ${mig.gruppe}`);
 ok("mig viser gruppekammerat", mig.gruppekammerater.length===2 && mig.gruppekammerater.some(k=>k.navn==="Bo Hansen"));
+ok("mig udleverer ikke studienummer", mig.studienummer===undefined &&
+   mig.gruppekammerater.every(k=>k.studienummer===undefined));
 
 console.log("\n=== Gruppen deler besvarelse ===");
 let { data:b } = await s1("GET","/api/besvarelse/0");
@@ -99,7 +112,8 @@ ok("hint logges", (await s1("POST","/api/haendelse",{type:"hint", runde:0, profi
 
 console.log("\n=== Underviserens overblik ===");
 const { data:o } = await a("GET",`/admin-api/hold/${hold.id}/oversigt`);
-ok("to grupper i overblikket", o.grupper.length===2, o.grupper.map(g=>g.navn).join(", "));
+ok("tre grupper i overblikket", o.grupper.length===3, o.grupper.map(g=>g.navn).join(", "));
+ok("overblik uden studienumre", o.grupper.every(g=>g.medlemmer.every(m=>m.studienummer===undefined)));
 const gr1 = o.grupper.find(g=>g.navn==="Gruppe 1");
 ok("gruppe 1 har to medlemmer", gr1.medlemmer.length===2);
 ok("runde 1 er afsluttet", gr1.runder[0].status==="afsluttet", gr1.runder[0].status);
@@ -120,6 +134,7 @@ ok("ny kode virker", (await klient()("POST","/api/login",{kode:nk.kode})).status
 const eks = await a("GET",`/admin-api/hold/${hold.id}/eksport`);
 const linjer = eks.data.split("\n");
 ok("CSV har overskrift og raekker", linjer.length > 20, linjer.length+" linjer");
+ok("CSV har ingen studienummer-kolonne", !linjer[0].includes("studienummer"), linjer[0].slice(0,80));
 const gr1linje = linjer.find(l => l.includes("Anne Jensen") && l.includes('";"A";'));
 ok("CSV rummer Gruppe 1's svar og facit", !!gr1linje && gr1linje.includes("elektronik"), (gr1linje||"").slice(0,130));
 ok("CSV skelner slutresultat fra foerste forsoeg",
@@ -133,7 +148,7 @@ ok("ulogget kan ikke hente besvarelse", (await klient()("GET","/api/besvarelse/0
 
 console.log("\n=== Sletning ved semesterslut ===");
 const { data:slettet } = await a("DELETE",`/admin-api/hold/${hold.id}`);
-ok("alt slettet", slettet.slettet.studerende===4 && slettet.slettet.grupper===2 && slettet.slettet.besvarelser>0,
+ok("alt slettet", slettet.slettet.studerende===6 && slettet.slettet.grupper===3 && slettet.slettet.besvarelser>0,
    JSON.stringify(slettet.slettet));
 ok("koden virker ikke efter sletning", (await klient()("POST","/api/login",{kode:nk.kode})).status === 401);
 ok("holdet er vaek", (await a("GET",`/admin-api/hold/${hold.id}/oversigt`)).status === 404);

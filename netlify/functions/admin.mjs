@@ -75,6 +75,7 @@ const sletHold = (req, ctx) =>
 // Underviseren indsætter en liste. Formatet skal tåle både et klip fra
 // Excel og en håndskrevet liste, så adskilleren må være tab, semikolon
 // eller komma, og en linje som "Gruppe 3" sætter gruppen for det, der følger.
+// Felterne er navn og gruppe – systemet kender ikke studienumre.
 export function laesListe(tekst) {
   const raekker = [];
   let aktuelGruppe = "";
@@ -89,19 +90,16 @@ export function laesListe(tekst) {
     }
 
     const felter = linje.split(/[\t;,]/).map(f => f.trim()).filter(Boolean);
+
+    // En gammel liste har studienummeret forrest. Det kastes væk her, så et
+    // nummer ikke kan komme ind i systemet som et navn ved et uheld. Et navn
+    // består aldrig kun af cifre.
+    if (felter.length >= 2 && /^\d+$/.test(felter[0])) felter.shift();
     if (!felter.length) continue;
 
-    let studienummer = "", navn = "", gruppe = aktuelGruppe;
-    if (felter.length >= 3) [studienummer, navn, gruppe] = felter;
-    else if (felter.length === 2) [studienummer, navn] = felter;
-    else if (/^\d+$/.test(felter[0])) studienummer = felter[0];
-    else navn = felter[0];
-
-    // Står navnet først og nummeret sidst, byttes de om.
-    if (navn && /^\d+$/.test(navn) && !/^\d+$/.test(studienummer)) [studienummer, navn] = [navn, studienummer];
-
-    if (!studienummer && !navn) continue;
-    raekker.push({ studienummer, navn, gruppe: gruppe || "Uden gruppe" });
+    const [navn, gruppe] = felter;
+    if (!navn || /^\d+$/.test(navn)) continue;
+    raekker.push({ navn, gruppe: gruppe || aktuelGruppe || "Uden gruppe" });
   }
   return raekker;
 }
@@ -121,9 +119,10 @@ const opretStuderende = (req, ctx) =>
 
     const oprettede = [], sprunget = [];
     for (const r of raekker) {
-      const dublet = eksisterende.find(
-        s => (r.studienummer && s.studienummer === r.studienummer) || (!r.studienummer && s.navn === r.navn)
-      );
+      // Navnet er den eneste identifikator, så to ens navne på samme hold
+      // opfattes som en gentagelse. Står der virkelig to ens, må den ene
+      // skelnes i listen, fx "Anne Jensen (gr. 2)".
+      const dublet = eksisterende.find(s => s.navn.toLowerCase() === r.navn.toLowerCase());
       if (dublet) {
         sprunget.push({ ...r, aarsag: "findes allerede" });
         continue;
@@ -141,7 +140,6 @@ const opretStuderende = (req, ctx) =>
         id: lager.nytId("st"),
         holdId: hold.id,
         gruppeId: gruppe.id,
-        studienummer: r.studienummer,
         navn: r.navn,
         kode,
         oprettet: new Date().toISOString(),
@@ -226,7 +224,6 @@ const oversigt = (req, ctx) =>
         medlemmer: medlemmer.map(s => ({
           id: s.id,
           navn: s.navn,
-          studienummer: s.studienummer,
           kode: s.kode,
           sidstSet: s.sidstSet,
           ...perStuderende.get(s.id),
@@ -261,7 +258,7 @@ const eksport = (req, ctx) =>
     const gruppeNavn = new Map(grupper.map(g => [g.id, g.navn]));
 
     const linjer = [
-      ["hold", "gruppe", "studienummer", "navn", "sidst_set", "runde", "profil", "valgt_model", "rigtig_model", "rigtig", "rigtig_foerste_forsoeg", "hint_brugt", "begrundelse"]
+      ["hold", "gruppe", "navn", "sidst_set", "runde", "profil", "valgt_model", "rigtig_model", "rigtig", "rigtig_foerste_forsoeg", "hint_brugt", "begrundelse"]
         .map(csvFelt)
         .join(";"),
     ];
@@ -269,7 +266,7 @@ const eksport = (req, ctx) =>
       const gNavn = gruppeNavn.get(s.gruppeId) ?? "";
       const gBesvarelser = besvarelser.filter(b => b.gruppeId === s.gruppeId);
       if (!gBesvarelser.length) {
-        linjer.push([hold.navn, gNavn, s.studienummer, s.navn, s.sidstSet ?? "", "", "", "", "", "", "", "", ""].map(csvFelt).join(";"));
+        linjer.push([hold.navn, gNavn, s.navn, s.sidstSet ?? "", "", "", "", "", "", "", "", ""].map(csvFelt).join(";"));
         continue;
       }
       for (const b of gBesvarelser.sort((a, x) => a.runde - x.runde)) {
@@ -277,7 +274,7 @@ const eksport = (req, ctx) =>
           const rigtig = rigtigModel(b.runde, profil);
           linjer.push(
             [
-              hold.navn, gNavn, s.studienummer, s.navn, s.sidstSet ?? "",
+              hold.navn, gNavn, s.navn, s.sidstSet ?? "",
               b.runde + 1, profil, b.valg?.[profil] ?? "", rigtig,
               b.valg?.[profil] === rigtig ? "ja" : "nej",
               b.rigtigFoerste?.[profil] ? "ja" : "nej",

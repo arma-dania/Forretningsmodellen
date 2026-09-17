@@ -68,10 +68,9 @@ const mig = req =>
     ]);
     const gruppekammerater = (await lager.hentStuderendePaaHold(session.holdId))
       .filter(s => s.gruppeId === session.gruppeId)
-      .map(s => ({ navn: s.navn, studienummer: s.studienummer, erMig: s.id === studerende.id }));
+      .map(s => ({ navn: s.navn, erMig: s.id === studerende.id }));
     return json({
       navn: studerende.navn,
-      studienummer: studerende.studienummer,
       hold: hold?.navn ?? "",
       gruppe: gruppe?.navn ?? "",
       gruppekammerater,
@@ -128,7 +127,7 @@ const gemBesvarelse = (req, ctx) =>
       refl: b.refl ?? nuvaerende.refl,
       version: nuvaerende.version + 1,
       opdateret: new Date().toISOString(),
-      opdateretAf: studerende.navn || studerende.studienummer,
+      opdateretAf: studerende.navn,
     };
     await lager.gemBesvarelse(session.holdId, session.gruppeId, runde, opdateret);
     return json({ version: opdateret.version, opdateret: opdateret.opdateret, opdateretAf: opdateret.opdateretAf });
@@ -177,7 +176,7 @@ const tjek = (req, ctx) =>
       facitVist: nuvaerende.facitVist || opgiv,
       version: nuvaerende.version + 1,
       opdateret: new Date().toISOString(),
-      opdateretAf: studerende.navn || studerende.studienummer,
+      opdateretAf: studerende.navn,
       ...(afsluttet ? { afsluttet: new Date().toISOString() } : {}),
     };
     await lager.gemBesvarelse(session.holdId, session.gruppeId, runde, opdateret);
