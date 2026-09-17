@@ -69,15 +69,27 @@ Hver underviser har sin egen miljøvariabel, så en kode kan skiftes for én
 underviser uden at røre de andre. Er en kode ikke sat, kan den underviser
 ikke logge ind; de øvrige er upåvirkede.
 
-Koderne skal tastes af et menneske, så de må gerne være kortere end
-sessionshemmeligheden, der aldrig skal skrives af nogen:
+Alle fire værdier skal være tilfældige – ikke noget, man finder på. Den
+nemmeste måde kræver ikke, at der er installeret noget:
+
+1. Åbn Chrome eller Edge på en vilkårlig side. (I Safari skal
+   udviklermenuen slås til først, så spring den over her.)
+2. Højreklik et tomt sted på siden → **Undersøg** (*Inspect*), og vælg
+   fanen **Console**.
+3. Skriv `crypto.randomUUID()` og tryk Enter. Du får en linje som
+   `a19240dc-e045-4ba7-83ed-da6dc764fb0a`.
+4. Tryk pil-op og Enter tre gange mere, så du har fire forskellige værdier
+   – én til hver variabel.
+
+Værdien er 36 tegn og tilfældig nok til både underviserkoderne og
+sessionshemmeligheden. Har du en adgangskodemanager, kan dens generator
+bruges i stedet – og den er samtidig et godt sted at lægge de tre
+underviserkoder, så de kan udleveres uden at flyde rundt i en mail.
+
+Er Node.js installeret, kan værdierne også laves i en terminal:
 
 ```
-# en underviserkode (16 tegn)
-node -e "console.log(require('crypto').randomBytes(12).toString('base64url'))"
-
-# sessionshemmeligheden (43 tegn)
-node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+node -e "console.log(require('crypto').randomUUID())"
 ```
 
 Gå derefter til **Deploys → Trigger deploy → Deploy site**. Ændringer i
