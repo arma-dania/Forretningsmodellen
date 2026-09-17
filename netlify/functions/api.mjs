@@ -1,9 +1,9 @@
 // De studerendes API. Alt kræver en gyldig session, undtagen login selv.
 
-import { json, fejl, krop, klientIp, ruter } from "./_svar.mjs";
-import * as auth from "./_auth.mjs";
-import * as lager from "./_lager.mjs";
-import { ret, antalRunder, profilIder } from "./_facit.mjs";
+import { json, fejl, krop, klientIp, ruter } from "./lib/svar.mjs";
+import * as auth from "./lib/auth.mjs";
+import * as lager from "./lib/lager.mjs";
+import { ret, antalRunder, profilIder } from "./lib/facit.mjs";
 
 const MAKS_FORSOEG = 10;
 const VINDUE_MS = 10 * 60e3;

@@ -1,9 +1,9 @@
 // Underviserens API. Alt herunder kræver underviser-session.
 
-import { json, fejl, krop, klientIp, ruter } from "./_svar.mjs";
-import * as auth from "./_auth.mjs";
-import * as lager from "./_lager.mjs";
-import { antalRunder, profilIder, rigtigModel } from "./_facit.mjs";
+import { json, fejl, krop, klientIp, ruter } from "./lib/svar.mjs";
+import * as auth from "./lib/auth.mjs";
+import * as lager from "./lib/lager.mjs";
+import { antalRunder, profilIder, rigtigModel } from "./lib/facit.mjs";
 
 const MAKS_FORSOEG = 8;
 const VINDUE_MS = 15 * 60e3;

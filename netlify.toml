@@ -4,13 +4,22 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # playwright bruges kun af prøverne i proever/. Netlify installerer også
+  # devDependencies, og pakken henter ellers en browser på et par hundrede
+  # megabyte ned under hvert build.
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
 
 # Øvelsen og admin-modulet er statiske sider uden byggetrin.
 # API'et ligger i netlify/functions og rammes på /api/* og /admin-api/*.
 #
 # Siden ligger i public/ og ikke i rodmappen med vilje: alt under publish
-# lægges ud som statiske filer, og netlify/functions/_facit.mjs indeholder
-# svarene på øvelsen. De to mapper skal holdes adskilt.
+# lægges ud som statiske filer, og facit ligger i netlify/functions/lib/.
+# De to mapper skal holdes adskilt.
+#
+# De delte filer ligger i lib/ og ikke ved siden af api.mjs og admin.mjs,
+# fordi hver fil i selve functions-mappen bliver til sit eget endepunkt.
+# En undermappe uden en indgangsfil af samme navn gør ikke, og facit skal
+# ikke kunne rammes udefra.
 
 [[headers]]
   for = "/*"

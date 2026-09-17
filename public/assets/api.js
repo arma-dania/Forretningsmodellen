@@ -3,7 +3,7 @@
 
    Øvelsen i app.js kalder kun funktionerne herunder og ved hverken,
    at der findes cookies, endepunkter eller adgangskoder. Sammen med
-   netlify/functions/_auth.mjs er det her, login bor: skal de studerende
+   netlify/functions/lib/auth.mjs er det her, login bor: skal de studerende
    senere logge ind gennem Moodle, skiftes de to filer, og resten kan blive.
    ============================================================ */
 const API = (() => {

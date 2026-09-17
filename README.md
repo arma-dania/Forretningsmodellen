@@ -118,7 +118,7 @@ godkendt. Koden er forberedt til det, se nedenfor.
 
 ## Tre undervisere
 
-Underviserne står i `netlify/functions/_undervisere.mjs`. Skal der en fjerde
+Underviserne står i `netlify/functions/lib/undervisere.mjs`. Skal der en fjerde
 til, tilføjes en linje der og en miljøvariabel i Netlify – der er ikke noget
 brugerregister at vedligeholde.
 
@@ -149,16 +149,17 @@ skal laves om til en liste.
 | `public/assets/styles.css` | Styling, inkl. lyst og mørkt tema |
 | `netlify/functions/api.mjs` | De studerendes API |
 | `netlify/functions/admin.mjs` | Underviserens API |
-| `netlify/functions/_facit.mjs` | **Facit og forklaringer** |
-| `netlify/functions/_auth.mjs` | Login: koder, sessioner |
-| `netlify/functions/_undervisere.mjs` | Underviserne og deres miljøvariabler |
-| `netlify/functions/_lager.mjs` | Lagring i Netlify Blobs |
-| `netlify/functions/_svar.mjs` | Ruter og svarhjælpere |
+| `netlify/functions/lib/facit.mjs` | **Facit og forklaringer** |
+| `netlify/functions/lib/auth.mjs` | Login: koder, sessioner |
+| `netlify/functions/lib/undervisere.mjs` | Underviserne og deres miljøvariabler |
+| `netlify/functions/lib/lager.mjs` | Lagring i Netlify Blobs |
+| `netlify/functions/lib/svar.mjs` | Ruter og svarhjælpere |
 | `proever/` | Prøver, der kan køres lokalt |
 
 `public/` og `netlify/` holdes adskilt med vilje: alt under `public/` lægges
 ud som statiske filer, og facit ligger i `netlify/`, hvor det ikke kan hentes
-af en browser.
+af en browser. De delte filer ligger i `lib/`, fordi hver fil i selve
+`functions`-mappen bliver til sit eget endepunkt – en undermappe gør ikke.
 
 ## Sådan redigeres indholdet
 
@@ -166,7 +167,7 @@ Indholdet ligger to steder, og de skal følges ad:
 
 - **`public/assets/data.js`** – profilernes nøgletal, modellernes navne og
   beskrivelser, nøgletalsdefinitionerne og refleksionsspørgsmålene.
-- **`netlify/functions/_facit.mjs`** – hvilken model der er den rigtige til
+- **`netlify/functions/lib/facit.mjs`** – hvilken model der er den rigtige til
   hver profil, og forklaringerne.
 
 Delingen er ikke tilfældig. `data.js` sendes til browseren, og de studerende
@@ -232,7 +233,7 @@ Login er holdt adskilt fra resten, så det kan skiftes uden at røre øvelsen,
 admin-modulet eller de data, der allerede er indsamlet. Resten af koden
 spørger kun "hvem er den her bruger?" gennem to steder:
 
-- `netlify/functions/_auth.mjs` – `hentSession()` på serveren
+- `netlify/functions/lib/auth.mjs` – `hentSession()` på serveren
 - `public/assets/api.js` – klientens kald
 
 Skal øvelsen senere ligge i Moodle som LTI-værktøj, er det de to filer, der

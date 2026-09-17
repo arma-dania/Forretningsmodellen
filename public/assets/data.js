@@ -2,7 +2,7 @@
    ØVELSENS INDHOLD – kan redigeres.
 
    Facit og forklaringer ligger IKKE her, men i
-   netlify/functions/_facit.mjs. Filen her sendes til browseren, og de
+   netlify/functions/lib/facit.mjs. Filen her sendes til browseren, og de
    studerende kan læse den i kildekoden – derfor må svarene ikke stå i
    den. Retter du en profil, skal facit rettes samme sted.
 

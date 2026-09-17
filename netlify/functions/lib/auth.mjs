@@ -3,8 +3,8 @@
 // senere logge ind gennem Moodle (LTI), er det denne fil, der skiftes ud —
 // endepunkter, admin-modul og gemte data kan blive, som de er.
 
-import { findVedKode } from "./_lager.mjs";
-import { UNDERVISERE } from "./_undervisere.mjs";
+import { findVedKode } from "./lager.mjs";
+import { UNDERVISERE } from "./undervisere.mjs";
 
 const COOKIE = "fm_session";
 const LEVETID_TIMER = 12;
@@ -103,7 +103,7 @@ export async function loginMedKode(kode) {
 }
 
 // Hver underviser har sin egen kode i sin egen miljøvariabel, se
-// _undervisere.mjs. Alle opsatte koder afprøves, og der afbrydes ikke
+// lib/undervisere.mjs. Alle opsatte koder afprøves, og der afbrydes ikke
 // undervejs, så svartiden ikke røber, hvilken underviser der var tæt på.
 export function loginSomUnderviser(kode) {
   const opsatte = UNDERVISERE.filter(u => process.env[u.miljoenoegle]);
