@@ -77,7 +77,7 @@ nemmeste måde kræver ikke, at der er installeret noget:
 2. Højreklik et tomt sted på siden → **Undersøg** (*Inspect*), og vælg
    fanen **Console**.
 3. Skriv `crypto.randomUUID()` og tryk Enter. Du får en linje som
-   `a19240dc-e045-4ba7-83ed-da6dc764fb0a`.
+   `1a2b3c4d-5e6f-7890-abcd-ef1234567890`. Brug din egen, ikke den her.
 4. Tryk pil-op og Enter tre gange mere, så du har fire forskellige værdier
    – én til hver variabel.
 
@@ -105,11 +105,23 @@ Beskeden på skærmen siger, hvad der er galt:
 
 | Besked | Betydning |
 | --- | --- |
-| **Forkert kode.** | Variablerne når frem. Koden passer bare ikke – brug værdien fra `UNDERVISER_ARNE` i Netlify, ikke den lokale prøvekode `arne1234`. |
+| **Forkert kode.** | Variablerne når frem. Koden passer bare ikke – brug værdien fra `UNDERVISER_ARNE` i Netlify, ikke den lokale prøvekode `kun-lokal-proeve-arne`. |
 | **Ingen underviserkoder er sat …** | Variablerne når ikke ud til funktionerne. Tjek scope og deploy igen. |
 | **SESSION_HEMMELIGHED er ikke sat …** | Samme, for den variabel. |
 
-`arne1234`, `helle1234` og `rasmus1234` virker kun på `npm run server` på din
+### Hvis byggeriet fejler med “Secrets scanning found secrets”
+Netlify scanner repoet og det byggede site for værdierne af dine hemmelige
+miljøvariabler. Findes en af dem i en fil, fejler byggeriet.
+
+Det betyder næsten altid, at værdien er for nem – typisk at en af de lokale
+prøvekoder er sat som rigtig kode. De står i dette repo, som er offentligt,
+så enhver kan læse dem på GitHub.
+
+Løsningen er at sætte en rigtig tilfældig værdi, ikke at slå scanningen fra.
+Byggeloggen nævner `SECRETS_SCAN_OMIT_PATHS` og `SECRETS_SCAN_ENABLED` –
+brug dem ikke her. Scanneren gør netop sit arbejde.
+
+`kun-lokal-proeve-arne`, `kun-lokal-proeve-helle` og `kun-lokal-proeve-rasmus` virker kun på `npm run server` på din
 egen maskine. De findes ikke på det deployede site.
 
 ### 3. Slå Netlify Blobs til
@@ -249,7 +261,7 @@ npm run server       # kun serveren, på http://localhost:8787
 ```
 
 Med `npm run server` kan du klikke rundt i det hele lokalt. Underviserkoderne
-er `arne1234`, `helle1234` og `rasmus1234`.
+er `kun-lokal-proeve-arne`, `kun-lokal-proeve-helle` og `kun-lokal-proeve-rasmus`.
 
 Prøverne dækker blandt andet, at facit ikke kan hentes ud før tid, at en låst
 profil ikke kan ændres, at gruppen deler besvarelse uden at overskrive

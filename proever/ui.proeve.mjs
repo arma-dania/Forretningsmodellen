@@ -23,7 +23,7 @@ await u.fill("#adminkode","forkert");
 await u.click("#loginknap");
 await u.waitForTimeout(300);
 ok("forkert kode giver besked", (await u.locator("#loginstatus").textContent()).includes("Forkert"));
-await u.fill("#adminkode","arne1234");
+await u.fill("#adminkode","kun-lokal-proeve-arne");
 await u.click("#loginknap");
 await u.waitForSelector("#adminside:not([hidden])");
 ok("underviser er inde", await u.locator("#adminside").isVisible());

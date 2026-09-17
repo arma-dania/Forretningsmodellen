@@ -17,7 +17,7 @@ function klient(){
 console.log("\n=== Underviser opretter hold og studerende ===");
 const a = klient();
 ok("forkert underviserkode afvises", (await a("POST","/admin-api/login",{kode:"forkert"})).status === 401);
-const arneLogin = await a("POST","/admin-api/login",{kode:"arne1234"});
+const arneLogin = await a("POST","/admin-api/login",{kode:"kun-lokal-proeve-arne"});
 ok("Arnes kode virker", arneLogin.status === 200 && arneLogin.data.navn === "Arne", arneLogin.data.navn);
 ok("mig viser hvem der er logget ind", (await a("GET","/admin-api/mig")).data.navn === "Arne");
 ok("hold kræver navn", (await a("POST","/admin-api/hold",{navn:"  "})).status === 400);
@@ -150,9 +150,9 @@ ok("ulogget kan ikke hente besvarelse", (await klient()("GET","/api/besvarelse/0
 
 console.log("\n=== Tre undervisere, adskilte hold ===");
 const h = klient(), r = klient();
-ok("Helles kode virker", (await h("POST","/admin-api/login",{kode:"helle1234"})).data.navn === "Helle");
-ok("Rasmus' kode virker", (await r("POST","/admin-api/login",{kode:"rasmus1234"})).data.navn === "Rasmus");
-ok("Arnes kode logger ikke ind som Helle", (await klient()("POST","/admin-api/login",{kode:"arne1234"})).data.navn !== "Helle");
+ok("Helles kode virker", (await h("POST","/admin-api/login",{kode:"kun-lokal-proeve-helle"})).data.navn === "Helle");
+ok("Rasmus' kode virker", (await r("POST","/admin-api/login",{kode:"kun-lokal-proeve-rasmus"})).data.navn === "Rasmus");
+ok("Arnes kode logger ikke ind som Helle", (await klient()("POST","/admin-api/login",{kode:"kun-lokal-proeve-arne"})).data.navn !== "Helle");
 
 ok("Helle ser ingen hold endnu", (await h("GET","/admin-api/hold")).data.hold.length === 0);
 const { data:{hold:helleHold} } = await h("POST","/admin-api/hold",{navn:"Helles hold"});

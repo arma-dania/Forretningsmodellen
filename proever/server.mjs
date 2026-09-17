@@ -22,9 +22,12 @@ registerHooks({
 });
 
 process.env.SESSION_HEMMELIGHED ??= "proevehemmelighed";
-process.env.UNDERVISER_ARNE ??= "arne1234";
-process.env.UNDERVISER_HELLE ??= "helle1234";
-process.env.UNDERVISER_RASMUS ??= "rasmus1234";
+// Koderne hedder "kun-lokal-proeve-", fordi de står i et offentligt repo.
+// Sættes en af dem som rigtig kode i Netlify, kan enhver læse den på GitHub
+// – navnet skal gøre det åbenlyst, at de ikke er til det.
+process.env.UNDERVISER_ARNE ??= "kun-lokal-proeve-arne";
+process.env.UNDERVISER_HELLE ??= "kun-lokal-proeve-helle";
+process.env.UNDERVISER_RASMUS ??= "kun-lokal-proeve-rasmus";
 
 const api = (await import(path.join(ROD, "netlify/functions/api.mjs"))).default;
 const admin = (await import(path.join(ROD, "netlify/functions/admin.mjs"))).default;
@@ -66,5 +69,5 @@ export function start(port = 8787) {
 
 if (process.argv[1] === import.meta.filename) {
   await start();
-  console.log("Prøveserver på http://localhost:8787 (koder: arne1234, helle1234, rasmus1234)");
+  console.log("Prøveserver på http://localhost:8787 (koder: kun-lokal-proeve-arne, kun-lokal-proeve-helle, kun-lokal-proeve-rasmus)");
 }
