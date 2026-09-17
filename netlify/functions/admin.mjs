@@ -14,6 +14,22 @@ async function medUnderviser(req, handler) {
   return handler(session);
 }
 
+// Henter holdet og tjekker, at det er den indloggede undervisers.
+//
+// Uden dette tjek på hvert endepunkt kunne en underviser nå en kollegas hold
+// ved at kende dets id – og id'et står i adressen, så snart man har set det
+// én gang. Et fremmed hold svares som "findes ikke" og ikke "ingen adgang",
+// så svaret ikke bekræfter, at holdet findes.
+const medHold = (req, ctx, handler) =>
+  medUnderviser(req, async session => {
+    // På ruterne om én studerende er :id den studerende og :holdId holdet,
+    // så holdId skal vælges først, hvor den findes.
+    const holdId = ctx.params.holdId ?? ctx.params.id;
+    const hold = await lager.hentHold(holdId);
+    if (!hold || hold.underviser !== session.underviser) return fejl("Holdet findes ikke.", 404);
+    return handler(hold, session);
+  });
+
 /* ---------- Login ---------- */
 async function login(req) {
   const b = await krop(req);
@@ -29,13 +45,13 @@ async function login(req) {
   }
   if (!indhold) return fejl("Forkert kode.", 401);
   await lager.nulstilForsoeg(spaerrenoegle);
-  return json({ ok: true }, 200, { "set-cookie": auth.saetCookie(await auth.lavSession(indhold)) });
+  return json({ navn: indhold.navn }, 200, { "set-cookie": auth.saetCookie(await auth.lavSession(indhold)) });
 }
 
 /* ---------- Hold ---------- */
 const listHold = req =>
-  medUnderviser(req, async () => {
-    const hold = await lager.alleHold();
+  medUnderviser(req, async session => {
+    const hold = (await lager.alleHold()).filter(h => h.underviser === session.underviser);
     const beriget = await Promise.all(
       hold.map(async h => {
         const [studerende, grupper] = await Promise.all([
@@ -54,22 +70,23 @@ const listHold = req =>
   });
 
 const opretHold = req =>
-  medUnderviser(req, async () => {
+  medUnderviser(req, async session => {
     const b = await krop(req);
     const navn = String(b?.navn ?? "").trim();
     if (!navn) return fejl("Holdet skal have et navn.");
-    const h = { id: lager.nytId("hold"), navn, oprettet: new Date().toISOString() };
+    const h = {
+      id: lager.nytId("hold"),
+      navn,
+      underviser: session.underviser,
+      underviserNavn: session.navn,
+      oprettet: new Date().toISOString(),
+    };
     await lager.gemHold(h);
     return json({ hold: h }, 201);
   });
 
 const sletHold = (req, ctx) =>
-  medUnderviser(req, async () => {
-    const h = await lager.hentHold(ctx.params.id);
-    if (!h) return fejl("Holdet findes ikke.", 404);
-    const slettet = await lager.sletHold(ctx.params.id);
-    return json({ slettet, navn: h.navn });
-  });
+  medHold(req, ctx, async h => json({ slettet: await lager.sletHold(h.id), navn: h.navn }));
 
 /* ---------- Oprettelse af studerende ---------- */
 // Underviseren indsætter en liste. Formatet skal tåle både et klip fra
@@ -105,9 +122,7 @@ export function laesListe(tekst) {
 }
 
 const opretStuderende = (req, ctx) =>
-  medUnderviser(req, async () => {
-    const hold = await lager.hentHold(ctx.params.id);
-    if (!hold) return fejl("Holdet findes ikke.", 404);
+  medHold(req, ctx, async hold => {
     const b = await krop(req);
     const raekker = laesListe(b?.liste ?? "");
     if (!raekker.length) return fejl("Listen gav ingen studerende. Tjek formatet.");
@@ -154,8 +169,8 @@ const opretStuderende = (req, ctx) =>
   });
 
 const nyKode = (req, ctx) =>
-  medUnderviser(req, async () => {
-    const s = await lager.hentStuderende(ctx.params.holdId, ctx.params.id);
+  medHold(req, ctx, async hold => {
+    const s = await lager.hentStuderende(hold.id, ctx.params.id);
     if (!s) return fejl("Den studerende findes ikke.", 404);
     await lager.frigivKode(s.kode);
     const kode = auth.lavKode();
@@ -165,8 +180,8 @@ const nyKode = (req, ctx) =>
   });
 
 const sletStuderende = (req, ctx) =>
-  medUnderviser(req, async () => {
-    const s = await lager.hentStuderende(ctx.params.holdId, ctx.params.id);
+  medHold(req, ctx, async hold => {
+    const s = await lager.hentStuderende(hold.id, ctx.params.id);
     if (!s) return fejl("Den studerende findes ikke.", 404);
     await lager.frigivKode(s.kode);
     await lager.slet(`studerende/${s.holdId}/${s.id}`);
@@ -176,11 +191,8 @@ const sletStuderende = (req, ctx) =>
 /* ---------- Overblik ---------- */
 // Samler holdets besvarelser og aktivitet til underviserens skærm.
 const oversigt = (req, ctx) =>
-  medUnderviser(req, async () => {
-    const holdId = ctx.params.id;
-    const hold = await lager.hentHold(holdId);
-    if (!hold) return fejl("Holdet findes ikke.", 404);
-
+  medHold(req, ctx, async hold => {
+    const holdId = hold.id;
     const [studerende, grupper, besvarelser, haendelser] = await Promise.all([
       lager.hentStuderendePaaHold(holdId),
       lager.hentGrupperPaaHold(holdId),
@@ -246,10 +258,8 @@ const oversigt = (req, ctx) =>
 const csvFelt = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
 const eksport = (req, ctx) =>
-  medUnderviser(req, async () => {
-    const holdId = ctx.params.id;
-    const hold = await lager.hentHold(holdId);
-    if (!hold) return fejl("Holdet findes ikke.", 404);
+  medHold(req, ctx, async hold => {
+    const holdId = hold.id;
     const [studerende, grupper, besvarelser] = await Promise.all([
       lager.hentStuderendePaaHold(holdId),
       lager.hentGrupperPaaHold(holdId),
@@ -297,7 +307,8 @@ const eksport = (req, ctx) =>
     });
   });
 
-const mig = req => medUnderviser(req, async () => json({ rolle: "underviser" }));
+const mig = req =>
+  medUnderviser(req, async session => json({ underviser: session.underviser, navn: session.navn }));
 const logud = () => json({ ok: true }, 200, { "set-cookie": auth.ryddCookie() });
 
 export default ruter({

@@ -23,10 +23,12 @@ await u.fill("#adminkode","forkert");
 await u.click("#loginknap");
 await u.waitForTimeout(300);
 ok("forkert kode giver besked", (await u.locator("#loginstatus").textContent()).includes("Forkert"));
-await u.fill("#adminkode","underviser1234");
+await u.fill("#adminkode","arne1234");
 await u.click("#loginknap");
 await u.waitForSelector("#adminside:not([hidden])");
 ok("underviser er inde", await u.locator("#adminside").isVisible());
+ok("undervisernavn vises", (await u.locator("#undervisernavn").textContent()) === "Arne",
+   await u.locator("#undervisernavn").textContent());
 
 const holdnavn = "Prøvehold " + Date.now();
 await u.fill("#holdnavn", holdnavn);

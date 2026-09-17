@@ -14,9 +14,12 @@ De studerende logger ind med en personlig adgangskode, arbejder i grupper på
 én fælles besvarelse, og underviseren kan følge både aktiviteten hos den
 enkelte og gruppernes resultater.
 
+Der er tre undervisere – Arne, Helle og Rasmus – med hver sin kode. Et hold
+hører til den underviser, der oprettede det, og kan kun ses af den underviser.
+
 ## Sådan kører øvelsen i klassen
 
-**Før timen.** Log ind på `/admin.html` med underviserkoden. Opret et hold, og
+**Før timen.** Log ind på `/admin.html` med din egen underviserkode. Opret et hold, og
 indsæt listen over studerende – ét navn pr. linje, eventuelt efterfulgt af
 gruppe, eller med `Gruppe 2` som overskrift over dem, der hører sammen. Du får en kode pr. studerende, som du udleverer
 – fx gennem Moodle eller på print (siden kan udskrives, og kun kodelisten
@@ -52,17 +55,28 @@ hvornår. `Hent resultater som CSV` giver en fil, du kan åbne i Excel.
 3. Byggeindstillingerne læses fra `netlify.toml`. Der er intet byggetrin.
    Tryk **Deploy**.
 
-### 2. Læg de to hemmeligheder ind
+### 2. Læg koderne og hemmeligheden ind
 I Netlify: **Site configuration → Environment variables**.
 
 | Variabel | Værdi |
 | --- | --- |
-| `ADMIN_KODE` | Din egen underviserkode. Vælg en lang og tilfældig. |
+| `UNDERVISER_ARNE` | Arnes kode. Vælg en lang og tilfældig. |
+| `UNDERVISER_HELLE` | Helles kode. |
+| `UNDERVISER_RASMUS` | Rasmus' kode. |
 | `SESSION_HEMMELIGHED` | En tilfældig streng på mindst 32 tegn. Den underskriver login-cookien og skal ikke deles med nogen. |
 
-En brugbar hemmelighed kan laves sådan:
+Hver underviser har sin egen miljøvariabel, så en kode kan skiftes for én
+underviser uden at røre de andre. Er en kode ikke sat, kan den underviser
+ikke logge ind; de øvrige er upåvirkede.
+
+Koderne skal tastes af et menneske, så de må gerne være kortere end
+sessionshemmeligheden, der aldrig skal skrives af nogen:
 
 ```
+# en underviserkode (16 tegn)
+node -e "console.log(require('crypto').randomBytes(12).toString('base64url'))"
+
+# sessionshemmeligheden (43 tegn)
 node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 ```
 
@@ -102,6 +116,25 @@ LTI-værktøj: så bruger de studerende deres eksisterende konto, resultaterne
 kan lande i karakterbogen, og data bliver i et system, der allerede er
 godkendt. Koden er forberedt til det, se nedenfor.
 
+## Tre undervisere
+
+Underviserne står i `netlify/functions/_undervisere.mjs`. Skal der en fjerde
+til, tilføjes en linje der og en miljøvariabel i Netlify – der er ikke noget
+brugerregister at vedligeholde.
+
+Adskillelsen håndhæves på serveren, ikke på skærmen. Et holds id står i
+adressen, så snart man har set holdet én gang, så hvert endepunkt om et hold
+– overblik, eksport, oprettelse af studerende, ny kode, sletning – går gennem
+det samme ejertjek. Et fremmed hold svares som “findes ikke” og ikke “ingen
+adgang”, så svaret ikke bekræfter, at holdet findes.
+
+De studerende logger ind samme sted uanset underviser; koden afgør, hvilket
+hold og hvilken gruppe de hører til.
+
+Et hold kan kun have én underviser. Skal to undervisere dele et hold, er det
+ikke bygget – så skal holdet oprettes to gange, eller `underviser` på holdet
+skal laves om til en liste.
+
 ## Filer
 
 | Fil | Indhold |
@@ -118,6 +151,7 @@ godkendt. Koden er forberedt til det, se nedenfor.
 | `netlify/functions/admin.mjs` | Underviserens API |
 | `netlify/functions/_facit.mjs` | **Facit og forklaringer** |
 | `netlify/functions/_auth.mjs` | Login: koder, sessioner |
+| `netlify/functions/_undervisere.mjs` | Underviserne og deres miljøvariabler |
 | `netlify/functions/_lager.mjs` | Lagring i Netlify Blobs |
 | `netlify/functions/_svar.mjs` | Ruter og svarhjælpere |
 | `proever/` | Prøver, der kan køres lokalt |
@@ -184,12 +218,13 @@ npm run proeve:api   # kun API, uden browser (hurtig)
 npm run server       # kun serveren, på http://localhost:8787
 ```
 
-Med `npm run server` kan du klikke rundt i det hele lokalt. Underviserkoden er
-`underviser1234`.
+Med `npm run server` kan du klikke rundt i det hele lokalt. Underviserkoderne
+er `arne1234`, `helle1234` og `rasmus1234`.
 
 Prøverne dækker blandt andet, at facit ikke kan hentes ud før tid, at en låst
 profil ikke kan ændres, at gruppen deler besvarelse uden at overskrive
-hinanden, og at sletning af et hold fjerner alt.
+hinanden, at sletning af et hold fjerner alt, og at én underviser ikke kan nå
+en kollegas hold – heller ikke ved at kende holdets id.
 
 ## Skift til login gennem Moodle
 

@@ -22,7 +22,9 @@ registerHooks({
 });
 
 process.env.SESSION_HEMMELIGHED ??= "proevehemmelighed";
-process.env.ADMIN_KODE ??= "underviser1234";
+process.env.UNDERVISER_ARNE ??= "arne1234";
+process.env.UNDERVISER_HELLE ??= "helle1234";
+process.env.UNDERVISER_RASMUS ??= "rasmus1234";
 
 const api = (await import(path.join(ROD, "netlify/functions/api.mjs"))).default;
 const admin = (await import(path.join(ROD, "netlify/functions/admin.mjs"))).default;
@@ -64,5 +66,5 @@ export function start(port = 8787) {
 
 if (process.argv[1] === import.meta.filename) {
   await start();
-  console.log("Prøveserver på http://localhost:8787 (underviserkode: underviser1234)");
+  console.log("Prøveserver på http://localhost:8787 (koder: arne1234, helle1234, rasmus1234)");
 }

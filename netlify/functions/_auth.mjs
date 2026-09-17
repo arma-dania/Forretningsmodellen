@@ -4,6 +4,7 @@
 // endepunkter, admin-modul og gemte data kan blive, som de er.
 
 import { findVedKode } from "./_lager.mjs";
+import { UNDERVISERE } from "./_undervisere.mjs";
 
 const COOKIE = "fm_session";
 const LEVETID_TIMER = 12;
@@ -49,15 +50,19 @@ export async function lavSession(indhold) {
   return `${krop}.${await signer(krop)}`;
 }
 
+// Sammenligner hele vejen igennem i stedet for at afbryde ved første
+// afvigende tegn, så svartiden ikke røber, hvor langt der var match.
+function sammenlign(a, b) {
+  const n = Math.max(a.length, b.length);
+  let afvig = a.length ^ b.length;
+  for (let i = 0; i < n; i++) afvig |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return afvig === 0;
+}
+
 async function laesToken(token) {
   const [krop, signatur] = String(token).split(".");
   if (!krop || !signatur) return null;
-  // Sammenlign hele signaturen frem for at afbryde ved første afvigende tegn.
-  const forventet = await signer(krop);
-  if (signatur.length !== forventet.length) return null;
-  let afvig = 0;
-  for (let i = 0; i < signatur.length; i++) afvig |= signatur.charCodeAt(i) ^ forventet.charCodeAt(i);
-  if (afvig !== 0) return null;
+  if (!sammenlign(signatur, await signer(krop))) return null;
   try {
     const nyttelast = JSON.parse(new TextDecoder().decode(fraBase64Url(krop)));
     return nyttelast.udloeber > Date.now() ? nyttelast : null;
@@ -97,13 +102,19 @@ export async function loginMedKode(kode) {
   };
 }
 
-// Underviseren logger ind med én kode fra miljøvariablerne. Der er kun én
-// underviser pr. site, så der er ikke noget brugerregister at vedligeholde.
+// Hver underviser har sin egen kode i sin egen miljøvariabel, se
+// _undervisere.mjs. Alle opsatte koder afprøves, og der afbrydes ikke
+// undervejs, så svartiden ikke røber, hvilken underviser der var tæt på.
 export function loginSomUnderviser(kode) {
-  const forventet = process.env.ADMIN_KODE;
-  if (!forventet) throw new Error("ADMIN_KODE er ikke sat i Netlify (Environment variables).");
-  if (String(kode) !== forventet) return null;
-  return { rolle: "underviser" };
+  const opsatte = UNDERVISERE.filter(u => process.env[u.miljoenoegle]);
+  if (!opsatte.length)
+    throw new Error(
+      "Ingen underviserkoder er sat i Netlify (Environment variables). Forventede " +
+        UNDERVISERE.map(u => u.miljoenoegle).join(", ") + "."
+    );
+  let fundet = null;
+  for (const u of opsatte) if (sammenlign(String(kode), process.env[u.miljoenoegle])) fundet = u;
+  return fundet ? { rolle: "underviser", underviser: fundet.id, navn: fundet.navn } : null;
 }
 
 export const erUnderviser = session => session?.rolle === "underviser";

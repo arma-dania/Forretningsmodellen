@@ -15,9 +15,9 @@
 <div class="wrap smal" id="loginside" hidden>
   <p class="kontekst">Gæt forretningsmodellen</p>
   <h1>Underviser</h1>
-  <p class="manchet">Log ind for at oprette hold og studerende og for at følge holdets arbejde.</p>
+  <p class="manchet">Log ind med din egen underviserkode for at oprette hold og studerende og for at følge dine holds arbejde. Du ser kun de hold, du selv har oprettet.</p>
   <form class="loginboks" id="loginform" autocomplete="off">
-    <label for="adminkode">Underviserkode</label>
+    <label for="adminkode">Din underviserkode</label>
     <input type="password" id="adminkode" required autocomplete="current-password">
     <p class="status" id="loginstatus" aria-live="polite"></p>
     <button type="submit" class="primaer" id="loginknap">Log ind</button>
@@ -29,14 +29,14 @@
 <div class="wrap" id="adminside" hidden>
 
 <div class="adminhoved">
-  <h1>Underviser</h1>
+  <h1>Underviser: <span id="undervisernavn"></span></h1>
   <div class="bjaelkehoejre">
     <span class="gemstatus" id="gemstatus" aria-live="polite"></span>
     <button type="button" class="linkbtn" id="logud">Log ud</button>
   </div>
 </div>
 
-<h2>Hold</h2>
+<h2>Dine hold</h2>
 <div class="holdliste" id="holdliste"></div>
 <form class="raekke" id="opretholdform">
   <div class="felt">

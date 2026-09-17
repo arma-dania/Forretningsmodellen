@@ -17,7 +17,9 @@ function klient(){
 console.log("\n=== Underviser opretter hold og studerende ===");
 const a = klient();
 ok("forkert underviserkode afvises", (await a("POST","/admin-api/login",{kode:"forkert"})).status === 401);
-ok("rigtig underviserkode virker", (await a("POST","/admin-api/login",{kode:"underviser1234"})).status === 200);
+const arneLogin = await a("POST","/admin-api/login",{kode:"arne1234"});
+ok("Arnes kode virker", arneLogin.status === 200 && arneLogin.data.navn === "Arne", arneLogin.data.navn);
+ok("mig viser hvem der er logget ind", (await a("GET","/admin-api/mig")).data.navn === "Arne");
 ok("hold kræver navn", (await a("POST","/admin-api/hold",{navn:"  "})).status === 400);
 const { data:{hold} } = await a("POST","/admin-api/hold",{navn:"MØK 2026 forår"});
 ok("hold oprettet", !!hold.id, hold.navn);
@@ -145,6 +147,42 @@ console.log("\n=== Adgangskontrol ===");
 ok("studerende kan ikke se overblik", (await s1("GET",`/admin-api/hold/${hold.id}/oversigt`)).status === 401);
 ok("studerende kan ikke oprette hold", (await s1("POST","/admin-api/hold",{navn:"Mit eget"})).status === 401);
 ok("ulogget kan ikke hente besvarelse", (await klient()("GET","/api/besvarelse/0")).status === 401);
+
+console.log("\n=== Tre undervisere, adskilte hold ===");
+const h = klient(), r = klient();
+ok("Helles kode virker", (await h("POST","/admin-api/login",{kode:"helle1234"})).data.navn === "Helle");
+ok("Rasmus' kode virker", (await r("POST","/admin-api/login",{kode:"rasmus1234"})).data.navn === "Rasmus");
+ok("Arnes kode logger ikke ind som Helle", (await klient()("POST","/admin-api/login",{kode:"arne1234"})).data.navn !== "Helle");
+
+ok("Helle ser ingen hold endnu", (await h("GET","/admin-api/hold")).data.hold.length === 0);
+const { data:{hold:helleHold} } = await h("POST","/admin-api/hold",{navn:"Helles hold"});
+await h("POST",`/admin-api/hold/${helleHold.id}/studerende`,{liste:"Gruppe 1\nGrete Holm"});
+ok("Helle ser sit eget hold", (await h("GET","/admin-api/hold")).data.hold.map(x=>x.navn).join() === "Helles hold");
+ok("Arne ser kun sit eget", (await a("GET","/admin-api/hold")).data.hold.every(x=>x.navn !== "Helles hold"),
+   (await a("GET","/admin-api/hold")).data.hold.map(x=>x.navn).join(", "));
+ok("Rasmus ser ingen af delene", (await r("GET","/admin-api/hold")).data.hold.length === 0);
+
+// Id'et står i adressen, så snart man har set holdet én gang. Derfor skal
+// hvert endepunkt afvise et fremmed hold, ikke bare listningen.
+console.log("  -- Helle forsoeger sig paa Arnes hold (id kendt) --");
+ok("overblik afvises", (await h("GET",`/admin-api/hold/${hold.id}/oversigt`)).status === 404);
+ok("eksport afvises", (await h("GET",`/admin-api/hold/${hold.id}/eksport`)).status === 404);
+ok("oprettelse af studerende afvises", (await h("POST",`/admin-api/hold/${hold.id}/studerende`,{liste:"Gruppe 1\nIndsat Person"})).status === 404);
+ok("ny kode til fremmed studerende afvises", (await h("POST",`/admin-api/studerende/${hold.id}/${bo.id}/nykode`)).status === 404);
+ok("sletning af fremmed studerende afvises", (await h("DELETE",`/admin-api/studerende/${hold.id}/${bo.id}`)).status === 404);
+ok("sletning af fremmed hold afvises", (await h("DELETE",`/admin-api/hold/${hold.id}`)).status === 404);
+ok("svaret roeber ikke at holdet findes", (await h("GET",`/admin-api/hold/${hold.id}/oversigt`)).data.fejl ===
+   (await h("GET","/admin-api/hold/hold_findesikke/oversigt")).data.fejl);
+ok("Arnes hold er uroert", (await a("GET",`/admin-api/hold/${hold.id}/oversigt`)).data.grupper.length === 3);
+ok("Arne kan ikke naa Helles hold", (await a("GET",`/admin-api/hold/${helleHold.id}/oversigt`)).status === 404);
+
+// De studerende hører til hvert sit hold, men logger ind samme sted.
+const grete = (await h("GET",`/admin-api/hold/${helleHold.id}/oversigt`)).data.grupper[0].medlemmer[0];
+const gs = klient();
+ok("Helles studerende kan logge ind", (await gs("POST","/api/login",{kode:grete.kode})).status === 200);
+ok("og lander paa Helles hold", (await gs("GET","/api/mig")).data.hold === "Helles hold");
+
+await h("DELETE",`/admin-api/hold/${helleHold.id}`);
 
 console.log("\n=== Sletning ved semesterslut ===");
 const { data:slettet } = await a("DELETE",`/admin-api/hold/${hold.id}`);

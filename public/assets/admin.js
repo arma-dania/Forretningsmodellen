@@ -28,6 +28,7 @@ async function kald(sti, indstillinger = {}) {
 let hold = [];
 let valgtHold = null;
 let overblik = null;
+let underviser = null;
 
 const dato = t => (t ? new Date(t).toLocaleString("da-DK", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "–");
 const navnPaa = s => s.navn || "(uden navn)";
@@ -52,6 +53,7 @@ $("loginform").addEventListener("submit", async e => {
   try {
     await kald("/admin-api/login", { metode: "POST", krop: { kode: $("adminkode").value }, taalerUlogget: true });
     $("adminkode").value = "";
+    valgtHold = null;
     melding("loginstatus", "");
     await start();
   } catch (fejl) {
@@ -69,6 +71,8 @@ $("logud").addEventListener("click", async () => {
 /* ---------- Hold ---------- */
 async function hentHold() {
   hold = (await kald("/admin-api/hold")).hold;
+  // Listen indeholder kun den indloggede undervisers egne hold; serveren
+  // filtrerer, så en kollegas hold aldrig når hertil.
   $("holdliste").innerHTML = hold.length
     ? hold
         .map(
@@ -78,7 +82,7 @@ async function hentHold() {
             ${h.antalLoggetInd} har logget ind</span></button>`
         )
         .join("")
-    : "<p class='sub'>Ingen hold endnu. Opret det første herunder.</p>";
+    : "<p class='sub'>Du har ingen hold endnu. Opret det første herunder.</p>";
 }
 
 $("holdliste").addEventListener("click", e => {
@@ -322,12 +326,13 @@ function tegnLog() {
 /* ---------- Start ---------- */
 async function start() {
   try {
-    await kald("/admin-api/mig", { taalerUlogget: true });
+    underviser = await kald("/admin-api/mig", { taalerUlogget: true });
   } catch {
     return visLogin();
   }
   $("loginside").hidden = true;
   $("adminside").hidden = false;
+  $("undervisernavn").textContent = underviser.navn;
   await hentHold();
   if (!valgtHold && hold.length) await vaelgHold(hold[0].id);
 }
