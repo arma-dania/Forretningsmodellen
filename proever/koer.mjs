@@ -7,7 +7,8 @@ const server = await start(8787);
 const koer = fil =>
   new Promise(klar => spawn(process.execPath, [path.join(import.meta.dirname, fil)], { stdio: "inherit" }).on("exit", klar));
 
-let kode = (await koer("api.proeve.mjs")) || 0;
+let kode = (await koer("opsaetning.proeve.mjs")) || 0;
+kode = (await koer("api.proeve.mjs")) || kode;
 if (process.argv.includes("--kun-api")) { server.close(); process.exit(kode); }
 kode = (await koer("ui.proeve.mjs")) || kode;
 server.close();

@@ -92,8 +92,25 @@ Er Node.js installeret, kan værdierne også laves i en terminal:
 node -e "console.log(require('crypto').randomUUID())"
 ```
 
+Hver variabel har et **scope** i Netlify. Det skal omfatte **Functions** –
+ellers kan API'et ikke se den, uanset at den står i listen. Vælges "All
+scopes", er det i orden. Variablerne må gerne markeres som *Contains secret
+values*; det skjuler dem blot i brugerfladen bagefter.
+
 Gå derefter til **Deploys → Trigger deploy → Deploy site**. Ændringer i
 miljøvariabler slår først igennem ved en ny deploy.
+
+### Hvis underviserlogin ikke virker
+Beskeden på skærmen siger, hvad der er galt:
+
+| Besked | Betydning |
+| --- | --- |
+| **Forkert kode.** | Variablerne når frem. Koden passer bare ikke – brug værdien fra `UNDERVISER_ARNE` i Netlify, ikke den lokale prøvekode `arne1234`. |
+| **Ingen underviserkoder er sat …** | Variablerne når ikke ud til funktionerne. Tjek scope og deploy igen. |
+| **SESSION_HEMMELIGHED er ikke sat …** | Samme, for den variabel. |
+
+`arne1234`, `helle1234` og `rasmus1234` virker kun på `npm run server` på din
+egen maskine. De findes ikke på det deployede site.
 
 ### 3. Slå Netlify Blobs til
 Hold, studerende, besvarelser og aktivitet gemmes i Netlify Blobs, som følger

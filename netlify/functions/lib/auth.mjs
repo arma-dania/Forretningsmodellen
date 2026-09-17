@@ -4,6 +4,7 @@
 // endepunkter, admin-modul og gemte data kan blive, som de er.
 
 import { findVedKode } from "./lager.mjs";
+import { Opsaetningsfejl } from "./svar.mjs";
 import { UNDERVISERE } from "./undervisere.mjs";
 
 const COOKIE = "fm_session";
@@ -25,7 +26,12 @@ export function lavKode() {
 // ikke kræver et opslag. Hemmeligheden ligger i Netlifys miljøvariabler.
 function hemmelighed() {
   const s = process.env.SESSION_HEMMELIGHED;
-  if (!s) throw new Error("SESSION_HEMMELIGHED er ikke sat i Netlify (Environment variables).");
+  if (!s)
+    throw new Opsaetningsfejl(
+      "SESSION_HEMMELIGHED er ikke sat. Tjek i Netlify under Site configuration → " +
+        "Environment variables, at variablen findes, og at dens scope omfatter Functions. " +
+        "Husk en ny deploy bagefter."
+    );
   return s;
 }
 
@@ -108,9 +114,10 @@ export async function loginMedKode(kode) {
 export function loginSomUnderviser(kode) {
   const opsatte = UNDERVISERE.filter(u => process.env[u.miljoenoegle]);
   if (!opsatte.length)
-    throw new Error(
-      "Ingen underviserkoder er sat i Netlify (Environment variables). Forventede " +
-        UNDERVISERE.map(u => u.miljoenoegle).join(", ") + "."
+    throw new Opsaetningsfejl(
+      "Ingen underviserkoder er sat. Tjek i Netlify under Site configuration → Environment " +
+        "variables, at mindst én af " + UNDERVISERE.map(u => u.miljoenoegle).join(", ") +
+        " findes, og at dens scope omfatter Functions. Husk en ny deploy bagefter."
     );
   let fundet = null;
   for (const u of opsatte) if (sammenlign(String(kode), process.env[u.miljoenoegle])) fundet = u;

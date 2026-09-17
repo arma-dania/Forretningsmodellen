@@ -1,5 +1,10 @@
 // Fælles svarhjælpere, så alle endepunkter svarer ens.
 
+// En fejl i opsætningen – typisk en miljøvariabel, der mangler. Den skal
+// frem til skærmen, så den, der sætter siden op, kan se hvad der mangler.
+// Alle andre fejl svares generisk, så interne detaljer ikke slipper ud.
+export class Opsaetningsfejl extends Error {}
+
 export const json = (data, status = 200, ekstraHeaders = {}) =>
   new Response(JSON.stringify(data), {
     status,
@@ -27,10 +32,10 @@ export const klientIp = req =>
 // { "METODE /sti": handler } med :navn som pladsholder i stien.
 export function ruter(ruteTabel) {
   const ruter = Object.entries(ruteTabel).map(([noegle, handler]) => {
-    const [metode, moenster] = noegle.split(" ");
-    const dele = moenster.split("/").filter(Boolean);
-    return { metode, dele, handler };
+    const [metode, sti] = noegle.split(" ");
+    return { metode, noegle, dele: sti.split("/").filter(Boolean), handler };
   });
+  const moenster = r => r.noegle;
 
   return async (req, ctx) => {
     const sti = new URL(req.url).pathname.split("/").filter(Boolean);
@@ -44,7 +49,17 @@ export function ruter(ruteTabel) {
         }
         return del === sti[i];
       });
-      if (passer) return r.handler(req, { ...ctx, params });
+      if (passer) {
+        try {
+          return await r.handler(req, { ...ctx, params });
+        } catch (e) {
+          if (e instanceof Opsaetningsfejl) return fejl(e.message, 500);
+          // Uden dette ville en uventet fejl give et bart 500 uden krop,
+          // og klienten kunne kun sige "Serveren svarede 500".
+          console.error("Uventet fejl i", moenster(r), e);
+          return fejl("Der gik noget galt på serveren. Prøv igen.", 500);
+        }
+      }
     }
     return fejl("Ukendt endepunkt.", 404);
   };

@@ -37,15 +37,13 @@ async function login(req) {
   if ((await lager.taelForsoeg(spaerrenoegle, VINDUE_MS)) > MAKS_FORSOEG)
     return fejl("For mange forsøg. Vent et kvarter.", 429);
 
-  let indhold;
-  try {
-    indhold = auth.loginSomUnderviser(b?.kode ?? "");
-  } catch (e) {
-    return fejl(String(e.message), 500);
-  }
+  // En manglende miljøvariabel kastes videre og bliver til en forklarende
+  // 500'er i ruteren. Den må ikke ende som et bart 500 uden besked.
+  const indhold = auth.loginSomUnderviser(b?.kode ?? "");
   if (!indhold) return fejl("Forkert kode.", 401);
+  const cookie = auth.saetCookie(await auth.lavSession(indhold));
   await lager.nulstilForsoeg(spaerrenoegle);
-  return json({ navn: indhold.navn }, 200, { "set-cookie": auth.saetCookie(await auth.lavSession(indhold)) });
+  return json({ navn: indhold.navn }, 200, { "set-cookie": cookie });
 }
 
 /* ---------- Hold ---------- */
